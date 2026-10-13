@@ -1,6 +1,6 @@
 // ===== הגדרות =====
 const COUPLE_NAMES = 'אליה ואחינעם';
-const FORM_URL = ''; // הקישור לטופס (GitHub Pages), משמש בהודעות התזכורת
+const FORM_URL = 'https://razielsaada248-code.github.io/Arrival-confirmations/'; // הקישור לטופס (GitHub Pages), משמש בהודעות התזכורת
 // ==================
 
 const SHEET_RESPONSES = 'תשובות';
