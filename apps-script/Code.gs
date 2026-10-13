@@ -1,11 +1,17 @@
 // ===== הגדרות =====
 const COUPLE_NAMES = 'אליה ואחינעם';
 const FORM_URL = 'https://razielsaada248-code.github.io/Arrival-confirmations/'; // הקישור לטופס (GitHub Pages), משמש בהודעות התזכורת
+const INVITATION_URL = FORM_URL + 'invitation.html'; // דף ההזמנה, נשלח בהודעה שבוע לפני
+const EVENT_DATE = 'יום חמישי, אור לי\' כסלו התשפ"ז · 19.11.2026';
+const EVENT_TIME = 'קבלת פנים 18:30 · חופה וקידושין 19:00';
+const EVENT_VENUE = 'אולמי אטורה, פארק מיני ישראל לטרון';
+const WAZE_URL = 'https://waze.com/ul?q=' + encodeURIComponent('אטורה מיני ישראל לטרון') + '&navigate=yes';
 // ==================
 
 const SHEET_RESPONSES = 'תשובות';
 const SHEET_SUMMARY = 'סיכום';
 const SHEET_REMINDERS = 'תזכורות';
+const SHEET_EVENT = 'שבוע לפני';
 
 const HEADERS = ['תאריך תשובה', 'שם פרטי', 'שם משפחה', 'טלפון', 'צד', 'סטטוס', 'מספר מגיעים', 'שם המלווה', 'עודכן לאחרונה', 'היסטוריה'];
 const COL = { date: 1, first: 2, last: 3, phone: 4, side: 5, status: 6, guests: 7, companion: 8, updated: 9, history: 10 };
@@ -20,7 +26,7 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('אישורי הגעה')
     .addItem('התקנה ראשונית', 'setup')
-    .addItem('רענון רשימת תזכורות', 'buildReminders')
+    .addItem('רענון רשימות השליחה', 'refreshLists')
     .addToUi();
 }
 
@@ -61,7 +67,7 @@ function doPost(e) {
       const history = sh.getRange(row, COL.history).getValue();
       const entry = Utilities.formatDate(now, Session.getScriptTimeZone(), 'dd/MM HH:mm') + ' ' + prev + ' → ' + status;
       sh.getRange(row, COL.first, 1, 9).setValues([[first, last, phone, side, status, guests, companion, now, history ? history + '\n' + entry : entry]]);
-      buildReminders();
+      refreshLists();
       return json({ status: 'updated' });
     }
 
@@ -69,7 +75,7 @@ function doPost(e) {
     const range = sh.getRange(newRow, 1, 1, HEADERS.length);
     sh.getRange(newRow, COL.phone).setNumberFormat('@');
     range.setValues([[now, first, last, phone, side, status, guests, companion, now, '']]);
-    if (status === UNSURE) buildReminders();
+    if (status !== NOT_COMING) refreshLists();
     return json({ status: 'ok' });
   } catch (err) {
     return json({ status: 'error', message: String(err) });
@@ -78,7 +84,7 @@ function doPost(e) {
   }
 }
 
-// ===== התקנה: יוצר את שלוש הלשוניות, כותרות, נוסחאות וצבעים =====
+// ===== התקנה: יוצר את הלשוניות, כותרות, נוסחאות וצבעים (אפשר להריץ שוב בבטחה) =====
 function setup() {
   const ss = SpreadsheetApp.getActive();
 
@@ -99,11 +105,13 @@ function setup() {
   ]);
 
   buildSummary(getSheet(SHEET_SUMMARY));
-  buildReminders();
+  buildSideSheets();
+  refreshLists();
   ss.setActiveSheet(ss.getSheetByName(SHEET_SUMMARY));
 }
 
 function buildSummary(sh) {
+  const sentCounts = sh.getRange('C4:D4').getValues()[0]; // שומר את מה שמולא ידנית
   sh.clear();
   sh.setRightToLeft(true);
   const R = "'" + SHEET_RESPONSES + "'!";
@@ -137,19 +145,53 @@ function buildSummary(sh) {
     sh.getRange(rowNum, 1, 1, 4).setValues([values]);
   });
 
-  sh.getRange('C4:D4').setBackground('#fff2cc'); // תאים למילוי ידני
+  sh.getRange('C4:D4').setValues([sentCounts.map((v) => (typeof v === 'number' ? v : 0))]).setBackground('#fff2cc'); // תאים למילוי ידני
   sh.getRange('B11:D12').setNumberFormat('0%');
   sh.getRange('A7:D7').setFontWeight('bold').setBackground('#d9ead3');
   sh.setColumnWidth(1, 300);
   sh.setColumnWidths(2, 3, 110);
 }
 
-// ===== רשימת תזכורות: כל מי שענה "לא יודע עדיין", עם כפתור וואטסאפ =====
+// ===== רשימות שליחה בוואטסאפ, עם כפתור לכל אחד =====
+// "תזכורות": מי שענה "לא יודע עדיין" – תזכורת לאשר הגעה
+// "שבוע לפני": מי שאישר הגעה – הודעה עם פרטי האירוע וההזמנה
+function refreshLists() {
+  buildReminders();
+  buildEventReminders();
+}
+
 function buildReminders() {
-  const sh = getSheet(SHEET_REMINDERS);
+  buildList(SHEET_REMINDERS, UNSURE, '📲 שלח תזכורת', (r) => {
+    const sideKey = r[COL.side - 1] === SIDES.bride ? 'bride' : 'groom';
+    return 'היי ' + r[COL.first - 1] + ', רצינו להזכיר לאשר הגעה לחתונה של ' + COUPLE_NAMES + ': ' + FORM_URL + '?side=' + sideKey + ' 💛';
+  });
+}
+
+function buildEventReminders() {
+  buildList(SHEET_EVENT, COMING, '📲 שלח הודעה', (r) => {
+    const guests = r[COL.guests - 1];
+    return [
+      'היי ' + r[COL.first - 1] + '! 💐',
+      'מזכירים בשמחה שבעוד שבוע נחגוג את החתונה של ' + COUPLE_NAMES + ' 🎉',
+      '',
+      '📅 ' + EVENT_DATE,
+      '🕡 ' + EVENT_TIME,
+      '📍 ' + EVENT_VENUE,
+      '🚗 ניווט: ' + WAZE_URL,
+      '',
+      'אישרתם הגעה של ' + (guests === 2 ? '2 אנשים' : 'אדם אחד') + '.',
+      '💌 ההזמנה: ' + INVITATION_URL,
+      '',
+      'מחכים לראותכם!'
+    ].join('\n');
+  });
+}
+
+function buildList(sheetName, status, buttonText, makeMessage) {
+  const sh = getSheet(sheetName);
   sh.setRightToLeft(true);
 
-  // שומר סימוני "נשלחה תזכורת" קיימים לפי טלפון
+  // שומר סימוני "נשלח" קיימים לפי טלפון
   const sent = {};
   if (sh.getLastRow() > 1) {
     sh.getRange(2, 1, sh.getLastRow() - 1, 6).getValues().forEach((r) => {
@@ -159,31 +201,52 @@ function buildReminders() {
 
   const resp = getSheet(SHEET_RESPONSES);
   const data = resp.getLastRow() > 1 ? resp.getRange(2, 1, resp.getLastRow() - 1, HEADERS.length).getValues() : [];
-  const unsure = data.filter((r) => r[COL.status - 1] === UNSURE);
+  const people = data.filter((r) => r[COL.status - 1] === status);
 
   sh.clear();
   sh.getRange(1, 1, 1, 6)
-    .setValues([['שם פרטי', 'שם משפחה', 'טלפון', 'צד', 'שליחה', 'נשלחה תזכורת']])
+    .setValues([['שם פרטי', 'שם משפחה', 'טלפון', 'צד', 'שליחה', 'נשלח']])
     .setFontWeight('bold')
     .setBackground('#efe7d8');
   sh.setFrozenRows(1);
-  if (!unsure.length) return;
+  sh.setColumnWidths(1, 6, 120);
+  if (!people.length) return;
 
-  const rows = unsure.map((r) => {
-    const first = r[COL.first - 1];
-    const phone = String(r[COL.phone - 1]);
-    const sideKey = r[COL.side - 1] === SIDES.bride ? 'bride' : 'groom';
-    const link = FORM_URL ? FORM_URL + '?side=' + sideKey : '';
-    const msg = 'היי ' + first + ', רצינו להזכיר לאשר הגעה לחתונה של ' + COUPLE_NAMES + (link ? ': ' + link : '') + ' 💛';
-    const url = 'https://wa.me/972' + phone.slice(1) + '?text=' + encodeURIComponent(msg);
-    return [first, r[COL.last - 1], phone, r[COL.side - 1], '=HYPERLINK("' + url + '","📲 שלח תזכורת")', !!sent[phone]];
+  const rows = people.map((r) => {
+    const phone = normalizePhone(r[COL.phone - 1]);
+    const url = 'https://wa.me/972' + phone.slice(1) + '?text=' + encodeURIComponent(makeMessage(r));
+    return [r[COL.first - 1], r[COL.last - 1], phone, r[COL.side - 1], '=HYPERLINK("' + url + '","' + buttonText + '")', !!sent[phone]];
   });
 
   sh.getRange(2, 3, rows.length, 1).setNumberFormat('@');
   sh.getRange(2, 1, rows.length, 6).setValues(rows);
-  sh.getRange(2, 6, rows.length, 1).insertCheckboxes();
-  rows.forEach((r, i) => sh.getRange(2 + i, 6).setValue(r[5]));
-  sh.setColumnWidths(1, 6, 120);
+  const checks = sh.getRange(2, 6, rows.length, 1);
+  checks.insertCheckboxes();
+  checks.setValues(rows.map((r) => [r[5]]));
+}
+
+// ===== לשונית נפרדת לכל צד: מתעדכנת לבד מתוך "תשובות" =====
+function buildSideSheets() {
+  const R = "'" + SHEET_RESPONSES + "'!";
+  Object.keys(SIDES).forEach((key) => {
+    const side = SIDES[key];
+    const sh = getSheet(side);
+    sh.clear();
+    sh.setRightToLeft(true);
+    sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold').setBackground('#efe7d8');
+    sh.setFrozenRows(1);
+    sh.getRange('A2').setFormula('=IFERROR(FILTER(' + R + 'A2:J,' + R + 'E2:E="' + side + '"),"אין עדיין תשובות")');
+    sh.getRange('A:A').setNumberFormat('dd/MM/yyyy HH:mm');
+    sh.getRange('I:I').setNumberFormat('dd/MM/yyyy HH:mm');
+    sh.setColumnWidths(1, HEADERS.length, 130);
+    sh.setColumnWidth(COL.history, 240);
+    const statusRange = sh.getRange('F2:F');
+    sh.setConditionalFormatRules([
+      colorRule(statusRange, COMING, '#d9ead3'),
+      colorRule(statusRange, NOT_COMING, '#f4cccc'),
+      colorRule(statusRange, UNSURE, '#fff2cc')
+    ]);
+  });
 }
 
 // ===== עזר =====
