@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>אישור הגעה | אליה ואחינעם</title>
+<meta name="description" content="אישור הגעה לחתונה של אליה ואחינעם">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&family=Frank+Ruhl+Libre:wght@400;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* צבעי העיצוב – יותאמו לסגנון ההזמנה */
+  :root {
+    --bg: #f3efe6;
+    --card: #fbf9f3;
+    --ink: #4f4b36;
+    --muted: #7a7560;
+    --accent: #b39b4f;
+    --lavender: #8b4f8c;
+    --accent-ink: #ffffff;
+    --line: #e2dbc8;
+    --error: #b3412e;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Heebo", system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.5;
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px 48px;
+  }
+  main { width: 100%; max-width: 480px; }
+  .card {
+    background: var(--card);
+    border: 2px solid var(--accent);
+    border-radius: var(--radius);
+    outline: 1px solid var(--line);
+    outline-offset: -10px;
+    padding: 36px 28px;
+    box-shadow: 0 6px 24px rgba(59, 51, 41, 0.06);
+  }
+  header { text-align: center; margin-bottom: 28px; }
+  .eyebrow { color: var(--lavender); letter-spacing: .08em; font-size: 15px; margin: 0 0 6px; }
+  h1 {
+    font-family: "Amatic SC", "Frank Ruhl Libre", serif;
+    font-weight: 700;
+    font-size: 52px;
+    color: var(--ink);
+    line-height: 1.15;
+    margin: 0 0 12px;
+  }
+  .divider { width: 64px; height: 1px; background: var(--lavender); margin: 14px auto; border: 0; }
+  .details { color: var(--muted); margin: 0; }
+  .details strong { color: var(--ink); font-weight: 500; }
+  .waze {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 12px; color: var(--lavender); font-weight: 500; text-decoration: none;
+    border-bottom: 1px solid currentColor;
+  }
+  .deadline { font-size: 15px; color: var(--muted); margin-top: 14px; }
+
+  form { display: grid; gap: 20px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  label, legend { display: block; font-weight: 500; margin-bottom: 6px; }
+  fieldset { border: 0; padding: 0; margin: 0; }
+  input[type="text"], input[type="tel"] {
+    width: 100%;
+    font: inherit;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ink);
+  }
+  input[type="tel"] { direction: ltr; text-align: right; }
+  input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+
+  .choices { display: grid; gap: 10px; }
+  .choices.two { grid-template-columns: 1fr 1fr; }
+  .choice input { position: absolute; opacity: 0; pointer-events: none; }
+  .choice span {
+    display: block; text-align: center;
+    padding: 12px 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .choice input:checked + span { background: var(--lavender); border-color: var(--lavender); color: var(--accent-ink); }
+  .choice input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .hint { font-size: 14px; color: var(--muted); margin: 6px 0 0; }
+
+  .error { color: var(--error); font-size: 14px; margin: 6px 0 0; min-height: 0; }
+  .error:empty { display: none; }
+  [hidden] { display: none !important; }
+
+  button[type="submit"] {
+    font: inherit; font-weight: 700;
+    padding: 14px;
+    border: 0; border-radius: 10px;
+    background: var(--lavender); color: #fff;
+    cursor: pointer;
+  }
+  button[disabled] { opacity: .6; cursor: wait; }
+  .hp { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  .result { text-align: center; padding: 12px 0; }
+  .result h2 { font-family: "Frank Ruhl Libre", serif; font-size: 30px; margin: 0 0 10px; }
+  .result p { margin: 0; color: var(--muted); }
+  .demo { margin-top: 16px; font-size: 13px; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+<main>
+  <div class="card">
+    <header>
+      <p class="eyebrow">אישור הגעה לחתונה</p>
+      <h1 id="couple"></h1>
+      <hr class="divider">
+      <p class="details" id="details"></p>
+      <a class="waze" id="waze" target="_blank" rel="noopener" hidden>ניווט עם Waze</a>
+      <p class="deadline" id="deadline" hidden></p>
+    </header>
+
+    <form id="rsvp" novalidate>
+      <div class="row">
+        <div>
+          <label for="firstName">שם פרטי</label>
+          <input type="text" id="firstName" name="firstName" autocomplete="given-name" required>
+        </div>
+        <div>
+          <label for="lastName">שם משפחה</label>
+          <input type="text" id="lastName" name="lastName" autocomplete="family-name" required>
+        </div>
+      </div>
+
+      <div>
+        <label for="phone">טלפון</label>
+        <input type="tel" id="phone" name="phone" inputmode="numeric" autocomplete="tel" placeholder="050-0000000" required>
+      </div>
+
+      <fieldset id="sideField">
+        <legend>אני מוזמן מ...</legend>
+        <div class="choices two">
+          <label class="choice"><input type="radio" name="side" value="groom"><span>צד החתן</span></label>
+          <label class="choice"><input type="radio" name="side" value="bride"><span>צד הכלה</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>האם תגיעו?</legend>
+        <div class="choices">
+          <label class="choice"><input type="radio" name="attendance" value="מגיע"><span>מגיע/ה</span></label>
+          <label class="choice"><input type="radio" name="attendance" value="לא מגיע"><span>לא מגיע/ה</span></label>
+          <label class="choice"><input type="radio" name="attendance" value="לא יודע עדיין"><span>עוד לא יודע/ת</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset id="guestsField" hidden>
+        <legend>כמה מגיעים?</legend>
+        <div class="choices two">
+          <label class="choice"><input type="radio" name="guests" value="1"><span>1</span></label>
+          <label class="choice"><input type="radio" name="guests" value="2"><span>2</span></label>
+        </div>
+        <p class="hint">המקומות מיועדים עד שני אנשים להזמנה.</p>
+      </fieldset>
+
+      <div class="hp" aria-hidden="true">
+        <label for="website">אתר</label>
+        <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+      </div>
+
+      <p class="error" id="formError" role="alert"></p>
+      <button type="submit" id="submitBtn">שליחה</button>
+    </form>
+
+    <div class="result" id="result" hidden>
+      <h2 id="resultTitle"></h2>
+      <p id="resultText"></p>
+    </div>
+  </div>
+  <p class="demo" id="demo" hidden>מצב תצוגה: הטופס עוד לא מחובר לגיליון, תשובות לא נשמרות.</p>
+</main>
+
+<script>
+  // ===== הגדרות האירוע – למלא כאן =====
+  const CONFIG = {
+    coupleNames: 'אליה ואחינעם',
+    dateText: 'יום חמישי, אור לי\' כסלו התשפ"ז',
+    gregorianDate: '19.11.2026',
+    timeText: 'קבלת פנים 18:30 · חופה וקידושין 19:00',
+    venue: 'אולמי אטורה, פארק מיני ישראל לטרון',
+    address: 'אטורה מיני ישראל לטרון', // חיפוש היעד ב-Waze
+    deadlineText: '',      // לדוגמה: 'נשמח לתשובה עד 25.11'
+    scriptUrl: ''          // כתובת ה-Web App של Google Apps Script
+  };
+  // =====================================
+
+  const $ = (id) => document.getElementById(id);
+  const form = $('rsvp');
+
+  $('couple').textContent = CONFIG.coupleNames;
+  const details = [CONFIG.dateText, CONFIG.gregorianDate, CONFIG.timeText, CONFIG.venue].filter(Boolean);
+  details.forEach((text, i) => {
+    if (i) $('details').append(document.createElement('br'));
+    const el = document.createElement(i < 2 ? 'strong' : 'span');
+    el.textContent = text;
+    $('details').append(el);
+  });
+  if (CONFIG.address) {
+    $('waze').href = 'https://waze.com/ul?q=' + encodeURIComponent(CONFIG.address) + '&navigate=yes';
+    $('waze').hidden = false;
+  }
+  if (CONFIG.deadlineText) {
+    $('deadline').textContent = CONFIG.deadlineText;
+    $('deadline').hidden = false;
+  }
+  if (!CONFIG.scriptUrl) $('demo').hidden = false;
+
+  // קישור עם ?side=groom או ?side=bride קובע את הצד מראש ומסתיר את השאלה
+  const presetSide = new URLSearchParams(location.search).get('side');
+  if (presetSide === 'groom' || presetSide === 'bride') {
+    form.querySelector(`input[name="side"][value="${presetSide}"]`).checked = true;
+    $('sideField').hidden = true;
+  }
+
+  form.addEventListener('change', (e) => {
+    if (e.target.name !== 'attendance') return;
+    const coming = e.target.value === 'מגיע';
+    $('guestsField').hidden = !coming;
+    if (!coming) form.querySelectorAll('input[name="guests"]').forEach((r) => (r.checked = false));
+  });
+
+  function normalizePhone(raw) {
+    let digits = String(raw).replace(/\D/g, '');
+    if (digits.startsWith('972')) digits = '0' + digits.slice(3);
+    return /^0\d{8,9}$/.test(digits) ? digits : '';
+  }
+
+  function validate(data) {
+    if (!data.firstName || !data.lastName) return 'נא למלא שם פרטי ושם משפחה';
+    if (!data.phone) return 'נא להזין מספר טלפון תקין';
+    if (!data.side) return 'נא לבחור צד חתן או צד כלה';
+    if (!data.attendance) return 'נא לבחור אם תגיעו';
+    if (data.attendance === 'מגיע' && !data.guests) return 'נא לבחור כמה מגיעים';
+    return '';
+  }
+
+  function showResult(title, text) {
+    form.hidden = true;
+    $('resultTitle').textContent = title;
+    $('resultText').textContent = text;
+    $('result').hidden = false;
+  }
+
+  const MESSAGES = {
+    'מגיע': ['תודה, נתראה בשמחה!', 'אישור ההגעה נקלט.'],
+    'לא מגיע': ['תודה על העדכון', 'נשמח לחגוג איתכם בהזדמנות אחרת.'],
+    'לא יודע עדיין': ['תודה, רשמנו', 'נשלח לכם תזכורת בהמשך כדי לקבל תשובה סופית.']
+  };
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const data = {
+      firstName: (fd.get('firstName') || '').trim(),
+      lastName: (fd.get('lastName') || '').trim(),
+      phone: normalizePhone(fd.get('phone') || ''),
+      side: fd.get('side') || '',
+      attendance: fd.get('attendance') || '',
+      guests: fd.get('guests') || '',
+      website: fd.get('website') || ''
+    };
+    const error = validate(data);
+    $('formError').textContent = error;
+    if (error) return;
+
+    const btn = $('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'שולח...';
+    try {
+      let res = { status: 'ok' };
+      if (CONFIG.scriptUrl) {
+        const r = await fetch(CONFIG.scriptUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(data)
+        });
+        res = await r.json();
+      }
+      if (res.status === 'ok' || res.status === 'updated') {
+        showResult(...MESSAGES[data.attendance]);
+      } else if (res.status === 'already') {
+        showResult('כבר קיבלנו את תשובתך', 'לשינוי תשובה אפשר לפנות ישירות לחתן או לכלה.');
+      } else {
+        throw new Error(res.message || 'שגיאה');
+      }
+    } catch (err) {
+      $('formError').textContent = 'השליחה נכשלה. נא לנסות שוב בעוד רגע.';
+      btn.disabled = false;
+      btn.textContent = 'שליחה';
+    }
+  });
+</script>
+</body>
+</html>
