@@ -7,8 +7,8 @@ const SHEET_RESPONSES = 'תשובות';
 const SHEET_SUMMARY = 'סיכום';
 const SHEET_REMINDERS = 'תזכורות';
 
-const HEADERS = ['תאריך תשובה', 'שם פרטי', 'שם משפחה', 'טלפון', 'צד', 'סטטוס', 'מספר מגיעים', 'עודכן לאחרונה', 'היסטוריה'];
-const COL = { date: 1, first: 2, last: 3, phone: 4, side: 5, status: 6, guests: 7, updated: 8, history: 9 };
+const HEADERS = ['תאריך תשובה', 'שם פרטי', 'שם משפחה', 'טלפון', 'צד', 'סטטוס', 'מספר מגיעים', 'שם המלווה', 'עודכן לאחרונה', 'היסטוריה'];
+const COL = { date: 1, first: 2, last: 3, phone: 4, side: 5, status: 6, guests: 7, companion: 8, updated: 9, history: 10 };
 
 const COMING = 'מגיע';
 const NOT_COMING = 'לא מגיע';
@@ -41,12 +41,14 @@ function doPost(e) {
     const side = SIDES[d.side];
     const status = d.attendance;
     const guests = status === COMING ? Number(d.guests) : '';
+    const companion = guests === 2 ? clean(d.companion) : '';
 
     if (!first || !last) return json({ status: 'error', message: 'חסר שם' });
     if (!phone) return json({ status: 'error', message: 'טלפון לא תקין' });
     if (!side) return json({ status: 'error', message: 'חסר צד' });
     if (STATUSES.indexOf(status) < 0) return json({ status: 'error', message: 'סטטוס לא תקין' });
     if (status === COMING && guests !== 1 && guests !== 2) return json({ status: 'error', message: 'מספר מגיעים לא תקין' });
+    if (guests === 2 && !companion) return json({ status: 'error', message: 'חסר שם מלווה' });
 
     const sh = getSheet(SHEET_RESPONSES);
     const now = new Date();
@@ -58,7 +60,7 @@ function doPost(e) {
       if (prev !== UNSURE) return json({ status: 'already', previous: prev });
       const history = sh.getRange(row, COL.history).getValue();
       const entry = Utilities.formatDate(now, Session.getScriptTimeZone(), 'dd/MM HH:mm') + ' ' + prev + ' → ' + status;
-      sh.getRange(row, COL.first, 1, 8).setValues([[first, last, phone, side, status, guests, now, history ? history + '\n' + entry : entry]]);
+      sh.getRange(row, COL.first, 1, 9).setValues([[first, last, phone, side, status, guests, companion, now, history ? history + '\n' + entry : entry]]);
       buildReminders();
       return json({ status: 'updated' });
     }
@@ -66,7 +68,7 @@ function doPost(e) {
     const newRow = sh.getLastRow() + 1;
     const range = sh.getRange(newRow, 1, 1, HEADERS.length);
     sh.getRange(newRow, COL.phone).setNumberFormat('@');
-    range.setValues([[now, first, last, phone, side, status, guests, now, '']]);
+    range.setValues([[now, first, last, phone, side, status, guests, companion, now, '']]);
     if (status === UNSURE) buildReminders();
     return json({ status: 'ok' });
   } catch (err) {
@@ -85,7 +87,7 @@ function setup() {
   resp.setFrozenRows(1);
   resp.setRightToLeft(true);
   resp.getRange('A:A').setNumberFormat('dd/MM/yyyy HH:mm');
-  resp.getRange('H:H').setNumberFormat('dd/MM/yyyy HH:mm');
+  resp.getRange('I:I').setNumberFormat('dd/MM/yyyy HH:mm');
   resp.getRange('D:D').setNumberFormat('@');
   resp.setColumnWidths(1, HEADERS.length, 130);
   resp.setColumnWidth(COL.history, 240);

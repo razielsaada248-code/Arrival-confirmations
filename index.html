@@ -172,6 +172,11 @@
         <p class="hint">המקומות מיועדים עד שני אנשים להזמנה.</p>
       </fieldset>
 
+      <div id="companionField" hidden>
+        <label for="companion">שם המלווה</label>
+        <input type="text" id="companion" name="companion" autocomplete="off" placeholder="שם פרטי ושם משפחה">
+      </div>
+
       <div class="hp" aria-hidden="true">
         <label for="website">אתר</label>
         <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
@@ -231,11 +236,20 @@
     $('sideField').hidden = true;
   }
 
+  function setCompanion(show) {
+    $('companionField').hidden = !show;
+    if (!show) $('companion').value = '';
+  }
+
   form.addEventListener('change', (e) => {
+    if (e.target.name === 'guests') setCompanion(e.target.value === '2');
     if (e.target.name !== 'attendance') return;
     const coming = e.target.value === 'מגיע';
     $('guestsField').hidden = !coming;
-    if (!coming) form.querySelectorAll('input[name="guests"]').forEach((r) => (r.checked = false));
+    if (!coming) {
+      form.querySelectorAll('input[name="guests"]').forEach((r) => (r.checked = false));
+      setCompanion(false);
+    }
   });
 
   function normalizePhone(raw) {
@@ -250,6 +264,7 @@
     if (!data.side) return 'נא לבחור צד חתן או צד כלה';
     if (!data.attendance) return 'נא לבחור אם תגיעו';
     if (data.attendance === 'מגיע' && !data.guests) return 'נא לבחור כמה מגיעים';
+    if (data.guests === '2' && !data.companion) return 'נא למלא את שם המלווה';
     return '';
   }
 
@@ -276,6 +291,7 @@
       side: fd.get('side') || '',
       attendance: fd.get('attendance') || '',
       guests: fd.get('guests') || '',
+      companion: (fd.get('companion') || '').trim(),
       website: fd.get('website') || ''
     };
     const error = validate(data);
