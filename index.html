@@ -177,7 +177,7 @@
       </fieldset>
 
       <div id="companionField" hidden>
-        <label for="companion">שם המלווה</label>
+        <label for="companion">עם מי אתה מגיע?</label>
         <input type="text" id="companion" name="companion" autocomplete="off" placeholder="שם פרטי ושם משפחה">
       </div>
 
@@ -268,7 +268,7 @@
     if (!data.side) return 'נא לבחור צד חתן או צד כלה';
     if (!data.attendance) return 'נא לבחור אם תגיעו';
     if (data.attendance === 'מגיע' && !data.guests) return 'נא לבחור כמה מגיעים';
-    if (data.guests === '2' && !data.companion) return 'נא למלא את שם המלווה';
+    if (data.guests === '2' && !data.companion) return 'נא למלא עם מי אתה מגיע';
     return '';
   }
 
