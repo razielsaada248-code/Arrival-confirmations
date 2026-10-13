@@ -30,6 +30,11 @@ function onOpen() {
     .addToUi();
 }
 
+// הזנה ידנית בלשונית "תשובות" מרעננת את רשימות השליחה
+function onEdit(e) {
+  if (e && e.range.getSheet().getName() === SHEET_RESPONSES) refreshLists();
+}
+
 function doGet() {
   return json({ status: 'ok', message: 'מערכת אישורי ההגעה פעילה' });
 }
@@ -103,6 +108,14 @@ function setup() {
     colorRule(statusRange, NOT_COMING, '#f4cccc'),
     colorRule(statusRange, UNSURE, '#fff2cc')
   ]);
+
+  // רשימות בחירה להזנה ידנית
+  const list = (values) => SpreadsheetApp.newDataValidation().requireValueInList(values, true).setAllowInvalid(false).build();
+  resp.getRange('E2:E').setDataValidation(list([SIDES.groom, SIDES.bride]));
+  resp.getRange('F2:F').setDataValidation(list(STATUSES));
+  resp.getRange('G2:G').setDataValidation(
+    SpreadsheetApp.newDataValidation().requireNumberBetween(1, 2).setAllowInvalid(false).setHelpText('1 או 2').build()
+  );
 
   buildSummary(getSheet(SHEET_SUMMARY));
   buildSideSheets();
@@ -215,7 +228,8 @@ function buildList(sheetName, status, buttonText, makeMessage) {
   const rows = people.map((r) => {
     const phone = normalizePhone(r[COL.phone - 1]);
     const url = 'https://wa.me/972' + phone.slice(1) + '?text=' + encodeURIComponent(makeMessage(r));
-    return [r[COL.first - 1], r[COL.last - 1], phone, r[COL.side - 1], '=HYPERLINK("' + url + '","' + buttonText + '")', !!sent[phone]];
+    const button = phone ? '=HYPERLINK("' + url + '","' + buttonText + '")' : 'טלפון לא תקין';
+    return [r[COL.first - 1], r[COL.last - 1], phone || r[COL.phone - 1], r[COL.side - 1], button, !!sent[phone]];
   });
 
   sh.getRange(2, 3, rows.length, 1).setNumberFormat('@');
