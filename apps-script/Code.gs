@@ -1,5 +1,5 @@
 // ===== הגדרות =====
-const COUPLE_NAMES = 'אליה ואחינעם';
+const COUPLE_NAMES = 'אליה ואחינועם';
 const FORM_URL = 'https://razielsaada248-code.github.io/Arrival-confirmations/'; // הקישור לטופס (GitHub Pages), משמש בהודעות התזכורת
 const INVITATION_URL = FORM_URL + 'invitation.html'; // דף ההזמנה, נשלח בהודעה שבוע לפני
 const EVENT_DATE = 'יום חמישי, אור לי\' כסלו התשפ"ז · 19.11.2026';
