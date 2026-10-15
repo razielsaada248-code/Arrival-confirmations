@@ -364,7 +364,7 @@
         throw new Error(res.message || 'שגיאה');
       }
     } catch (err) {
-      $('formError').textContent = 'השליחה נכשלה. נא לנסות שוב בעוד רגע.';
+      $('formError').textContent = 'השליחה נכשלה. נא לנסות שוב בעוד רגע.' + (err && err.message ? ' (' + err.message + ')' : '');
       btn.disabled = false;
       btn.textContent = 'שליחה';
     }
