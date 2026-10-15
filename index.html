@@ -99,6 +99,19 @@
   }
   .choice input:checked + span { background: var(--lavender); border-color: var(--lavender); color: var(--accent-ink); }
   .choice input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .side-tag {
+    display: inline-block; margin: 0 0 10px;
+    padding: 3px 14px; border-radius: 999px;
+    border: 1px solid var(--lavender); color: var(--lavender);
+    font-size: 15px; font-weight: 500;
+  }
+  select {
+    width: 100%; font: inherit;
+    padding: 12px 14px;
+    border: 1px solid var(--line); border-radius: 10px;
+    background: #fff; color: var(--ink);
+  }
+  select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .hint { font-size: 14px; color: var(--muted); margin: 6px 0 0; }
 
   .error { color: var(--error); font-size: 14px; margin: 6px 0 0; min-height: 0; }
@@ -126,6 +139,7 @@
   <div class="card">
     <header>
       <p class="eyebrow">אישור הגעה לחתונה</p>
+      <p class="side-tag" id="sideTag" hidden></p>
       <h1 id="couple"></h1>
       <hr class="divider">
       <p class="details" id="details"></p>
@@ -174,6 +188,20 @@
           <label class="choice"><input type="radio" name="guests" value="2"><span>2</span></label>
         </div>
         <p class="hint">המקומות מיועדים עד שני אנשים להזמנה.</p>
+      </fieldset>
+
+      <fieldset id="partyField" hidden>
+        <legend>כמה מגיעים?</legend>
+        <div class="row">
+          <div>
+            <label for="adults">מבוגרים</label>
+            <select id="adults" name="adults"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select>
+          </div>
+          <div>
+            <label for="kids">ילדים עד גיל 5</label>
+            <select id="kids" name="kids"><option value="0" selected>0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select>
+          </div>
+        </div>
       </fieldset>
 
       <div id="companionField" hidden>
@@ -238,22 +266,24 @@
   if (presetSide === 'groom' || presetSide === 'bride') {
     form.querySelector(`input[name="side"][value="${presetSide}"]`).checked = true;
     $('sideField').hidden = true;
+    $('sideTag').textContent = presetSide === 'bride' ? 'מוזמני צד הכלה' : 'מוזמני צד החתן';
+    $('sideTag').hidden = false;
   }
 
-  function setCompanion(show) {
-    $('companionField').hidden = !show;
-    if (!show) $('companion').value = '';
+  // צד החתן: 1 או 2 + שם המלווה. צד הכלה: מספר מבוגרים וילדים עד גיל 5.
+  function updateFields() {
+    const fd = new FormData(form);
+    const coming = fd.get('attendance') === 'מגיע';
+    const bride = fd.get('side') === 'bride';
+    $('guestsField').hidden = !coming || bride;
+    $('partyField').hidden = !coming || !bride;
+    $('companionField').hidden = !coming || bride || fd.get('guests') !== '2';
+    if ($('guestsField').hidden) form.querySelectorAll('input[name="guests"]').forEach((r) => (r.checked = false));
+    if ($('companionField').hidden) $('companion').value = '';
   }
 
   form.addEventListener('change', (e) => {
-    if (e.target.name === 'guests') setCompanion(e.target.value === '2');
-    if (e.target.name !== 'attendance') return;
-    const coming = e.target.value === 'מגיע';
-    $('guestsField').hidden = !coming;
-    if (!coming) {
-      form.querySelectorAll('input[name="guests"]').forEach((r) => (r.checked = false));
-      setCompanion(false);
-    }
+    if (['attendance', 'side', 'guests'].includes(e.target.name)) updateFields();
   });
 
   function normalizePhone(raw) {
@@ -267,7 +297,7 @@
     if (!data.phone) return 'נא להזין מספר טלפון תקין';
     if (!data.side) return 'נא לבחור צד חתן או צד כלה';
     if (!data.attendance) return 'נא לבחור אם תגיעו';
-    if (data.attendance === 'מגיע' && !data.guests) return 'נא לבחור כמה מגיעים';
+    if (data.attendance === 'מגיע' && data.side !== 'bride' && !data.guests) return 'נא לבחור כמה מגיעים';
     if (data.guests === '2' && !data.companion) return 'נא למלא עם מי אתה מגיע';
     return '';
   }
@@ -296,6 +326,8 @@
       attendance: fd.get('attendance') || '',
       guests: fd.get('guests') || '',
       companion: (fd.get('companion') || '').trim(),
+      adults: fd.get('adults') || '',
+      kids: fd.get('kids') || '',
       website: fd.get('website') || ''
     };
     const error = validate(data);

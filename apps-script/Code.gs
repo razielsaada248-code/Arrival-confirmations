@@ -13,8 +13,8 @@ const SHEET_SUMMARY = 'סיכום';
 const SHEET_REMINDERS = 'תזכורות';
 const SHEET_EVENT = 'שבוע לפני';
 
-const HEADERS = ['תאריך תשובה', 'שם פרטי', 'שם משפחה', 'טלפון', 'צד', 'סטטוס', 'מספר מגיעים', 'שם המלווה', 'עודכן לאחרונה', 'היסטוריה'];
-const COL = { date: 1, first: 2, last: 3, phone: 4, side: 5, status: 6, guests: 7, companion: 8, updated: 9, history: 10 };
+const HEADERS = ['תאריך תשובה', 'שם פרטי', 'שם משפחה', 'טלפון', 'צד', 'סטטוס', 'מספר מגיעים', 'שם המלווה', 'עודכן לאחרונה', 'היסטוריה', 'מבוגרים', 'ילדים עד גיל 5'];
+const COL = { date: 1, first: 2, last: 3, phone: 4, side: 5, status: 6, guests: 7, companion: 8, updated: 9, history: 10, adults: 11, kids: 12 };
 
 const COMING = 'מגיע';
 const NOT_COMING = 'לא מגיע';
@@ -51,15 +51,21 @@ function doPost(e) {
     const phone = normalizePhone(d.phone);
     const side = SIDES[d.side];
     const status = d.attendance;
-    const guests = status === COMING ? Number(d.guests) : '';
-    const companion = guests === 2 ? clean(d.companion) : '';
+    // צד החתן: 1 או 2 + שם המלווה. צד הכלה: מבוגרים + ילדים עד גיל 5.
+    const bride = d.side === 'bride';
+    const coming = status === COMING;
+    const adults = coming ? (bride ? Number(d.adults) : Number(d.guests)) : '';
+    const kids = coming ? (bride ? Number(d.kids) : 0) : '';
+    const guests = coming ? adults + kids : '';
+    const companion = coming && !bride && guests === 2 ? clean(d.companion) : '';
 
     if (!first || !last) return json({ status: 'error', message: 'חסר שם' });
     if (!phone) return json({ status: 'error', message: 'טלפון לא תקין' });
     if (!side) return json({ status: 'error', message: 'חסר צד' });
     if (STATUSES.indexOf(status) < 0) return json({ status: 'error', message: 'סטטוס לא תקין' });
-    if (status === COMING && guests !== 1 && guests !== 2) return json({ status: 'error', message: 'מספר מגיעים לא תקין' });
-    if (guests === 2 && !companion) return json({ status: 'error', message: 'חסר שם מלווה' });
+    if (coming && bride && !(isCount(adults, 1, 10) && isCount(kids, 0, 10))) return json({ status: 'error', message: 'מספר מגיעים לא תקין' });
+    if (coming && !bride && guests !== 1 && guests !== 2) return json({ status: 'error', message: 'מספר מגיעים לא תקין' });
+    if (coming && !bride && guests === 2 && !companion) return json({ status: 'error', message: 'חסר שם מלווה' });
 
     const sh = getSheet(SHEET_RESPONSES);
     const now = new Date();
@@ -71,7 +77,7 @@ function doPost(e) {
       if (prev !== UNSURE) return json({ status: 'already', previous: prev });
       const history = sh.getRange(row, COL.history).getValue();
       const entry = Utilities.formatDate(now, Session.getScriptTimeZone(), 'dd/MM HH:mm') + ' ' + prev + ' → ' + status;
-      sh.getRange(row, COL.first, 1, 9).setValues([[first, last, phone, side, status, guests, companion, now, history ? history + '\n' + entry : entry]]);
+      sh.getRange(row, COL.first, 1, 11).setValues([[first, last, phone, side, status, guests, companion, now, history ? history + '\n' + entry : entry, adults, kids]]);
       refreshLists();
       return json({ status: 'updated' });
     }
@@ -79,7 +85,7 @@ function doPost(e) {
     const newRow = sh.getLastRow() + 1;
     const range = sh.getRange(newRow, 1, 1, HEADERS.length);
     sh.getRange(newRow, COL.phone).setNumberFormat('@');
-    range.setValues([[now, first, last, phone, side, status, guests, companion, now, '']]);
+    range.setValues([[now, first, last, phone, side, status, guests, companion, now, '', adults, kids]]);
     if (status !== NOT_COMING) refreshLists();
     return json({ status: 'ok' });
   } catch (err) {
@@ -114,8 +120,10 @@ function setup() {
   resp.getRange('E2:E').setDataValidation(list([SIDES.groom, SIDES.bride]));
   resp.getRange('F2:F').setDataValidation(list(STATUSES));
   resp.getRange('G2:G').setDataValidation(
-    SpreadsheetApp.newDataValidation().requireNumberBetween(1, 2).setAllowInvalid(false).setHelpText('1 או 2').build()
+    SpreadsheetApp.newDataValidation().requireNumberBetween(1, 20).setAllowInvalid(false).setHelpText('סה"כ אנשים: צד חתן 1 או 2, צד כלה מבוגרים + ילדים').build()
   );
+  const count = SpreadsheetApp.newDataValidation().requireNumberBetween(0, 10).setAllowInvalid(false).build();
+  resp.getRange('K2:L').setDataValidation(count);
 
   buildSummary(getSheet(SHEET_SUMMARY));
   buildSideSheets();
@@ -141,7 +149,9 @@ function buildSummary(sh) {
     ['עוד לא יודעים', (s) => countStatus(UNSURE, s)],
     ['לא ענו בכלל', (s, c) => '=MAX(0,' + c + '4-' + c + '5)'],
     ['אחוז שענו מתוך שנשלחו', (s, c) => '=IFERROR(' + c + '5/' + c + '4,"")'],
-    ['אחוז מגיעים מתוך שנשלחו', (s, c) => '=IFERROR(' + c + '6/' + c + '4,"")']
+    ['אחוז מגיעים מתוך שנשלחו', (s, c) => '=IFERROR(' + c + '6/' + c + '4,"")'],
+    ['מתוך המגיעים: ילדים עד גיל 5', (s) => '=SUMIFS(' + R + 'L2:L,' + R + 'F2:F,"' + COMING + '"' + sideCond(s) + ')'],
+    ['מתוך המגיעים: מבוגרים', (s, c) => '=' + c + '7-' + c + '13']
   ];
 
   sh.getRange('A1').setValue('סיכום אישורי הגעה – ' + COUPLE_NAMES).setFontSize(16).setFontWeight('bold');
@@ -182,7 +192,9 @@ function buildReminders() {
 
 function buildEventReminders() {
   buildList(SHEET_EVENT, COMING, '📲 שלח הודעה', (r) => {
-    const guests = r[COL.guests - 1];
+    const guests = Number(r[COL.guests - 1]) || 1;
+    const kids = Number(r[COL.kids - 1]) || 0;
+    const party = (guests === 1 ? 'אדם אחד' : guests + ' אנשים') + (kids ? ' (מתוכם ' + kids + ' ילדים)' : '');
     return [
       'היי ' + r[COL.first - 1] + '! 💐',
       'מזכירים בשמחה שבעוד שבוע נחגוג את החתונה של ' + COUPLE_NAMES + ' 🎉',
@@ -192,7 +204,7 @@ function buildEventReminders() {
       '📍 ' + EVENT_VENUE,
       '🚗 ניווט: ' + WAZE_URL,
       '',
-      'אישרתם הגעה של ' + (guests === 2 ? '2 אנשים' : 'אדם אחד') + '.',
+      'אישרתם הגעה של ' + party + '.',
       '💌 ההזמנה: ' + INVITATION_URL,
       '',
       'מחכים לראותכם!'
@@ -249,7 +261,7 @@ function buildSideSheets() {
     sh.setRightToLeft(true);
     sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold').setBackground('#efe7d8');
     sh.setFrozenRows(1);
-    sh.getRange('A2').setFormula('=IFERROR(FILTER(' + R + 'A2:J,' + R + 'E2:E="' + side + '"),"אין עדיין תשובות")');
+    sh.getRange('A2').setFormula('=IFERROR(FILTER(' + R + 'A2:L,' + R + 'E2:E="' + side + '"),"אין עדיין תשובות")');
     sh.getRange('A:A').setNumberFormat('dd/MM/yyyy HH:mm');
     sh.getRange('I:I').setNumberFormat('dd/MM/yyyy HH:mm');
     sh.setColumnWidths(1, HEADERS.length, 130);
@@ -284,6 +296,10 @@ function normalizePhone(raw) {
   if (digits.startsWith('972')) digits = '0' + digits.slice(3);
   if (/^5\d{8}$/.test(digits)) digits = '0' + digits; // אם גוגל הוריד את ה-0
   return /^0\d{8,9}$/.test(digits) ? digits : '';
+}
+
+function isCount(n, min, max) {
+  return Number.isInteger(n) && n >= min && n <= max;
 }
 
 function clean(s) {
