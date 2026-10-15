@@ -202,6 +202,11 @@
             <select id="kids" name="kids"><option value="0" selected>0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select>
           </div>
         </div>
+        <div id="namesField" hidden>
+          <label for="names" style="margin-top:12px">שמות המגיעים איתך</label>
+          <input type="text" id="names" name="names" autocomplete="off" placeholder="לדוגמה: רחל, יוסי, נועה">
+          <p class="hint">לא חובה, אבל נשמח לדעת.</p>
+        </div>
       </fieldset>
 
       <div id="companionField" hidden>
@@ -280,10 +285,13 @@
     $('companionField').hidden = !coming || bride || fd.get('guests') !== '2';
     if ($('guestsField').hidden) form.querySelectorAll('input[name="guests"]').forEach((r) => (r.checked = false));
     if ($('companionField').hidden) $('companion').value = '';
+    const party = Number(fd.get('adults')) + Number(fd.get('kids'));
+    $('namesField').hidden = $('partyField').hidden || party < 2;
+    if ($('namesField').hidden) $('names').value = '';
   }
 
   form.addEventListener('change', (e) => {
-    if (['attendance', 'side', 'guests'].includes(e.target.name)) updateFields();
+    if (['attendance', 'side', 'guests', 'adults', 'kids'].includes(e.target.name)) updateFields();
   });
 
   function normalizePhone(raw) {
@@ -328,6 +336,7 @@
       companion: (fd.get('companion') || '').trim(),
       adults: fd.get('adults') || '',
       kids: fd.get('kids') || '',
+      names: (fd.get('names') || '').trim(),
       website: fd.get('website') || ''
     };
     const error = validate(data);

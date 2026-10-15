@@ -13,7 +13,7 @@ const SHEET_SUMMARY = 'סיכום';
 const SHEET_REMINDERS = 'תזכורות';
 const SHEET_EVENT = 'שבוע לפני';
 
-const HEADERS = ['תאריך תשובה', 'שם פרטי', 'שם משפחה', 'טלפון', 'צד', 'סטטוס', 'מספר מגיעים', 'שם המלווה', 'עודכן לאחרונה', 'היסטוריה', 'מבוגרים', 'ילדים עד גיל 5'];
+const HEADERS = ['תאריך תשובה', 'שם פרטי', 'שם משפחה', 'טלפון', 'צד', 'סטטוס', 'מספר מגיעים', 'שמות המלווים', 'עודכן לאחרונה', 'היסטוריה', 'מבוגרים', 'ילדים עד גיל 5'];
 const COL = { date: 1, first: 2, last: 3, phone: 4, side: 5, status: 6, guests: 7, companion: 8, updated: 9, history: 10, adults: 11, kids: 12 };
 
 const COMING = 'מגיע';
@@ -57,7 +57,7 @@ function doPost(e) {
     const adults = coming ? (bride ? Number(d.adults) : Number(d.guests)) : '';
     const kids = coming ? (bride ? Number(d.kids) : 0) : '';
     const guests = coming ? adults + kids : '';
-    const companion = coming && !bride && guests === 2 ? clean(d.companion) : '';
+    const companion = !coming ? '' : bride ? clean(d.names, 300) : guests === 2 ? clean(d.companion) : '';
 
     if (!first || !last) return json({ status: 'error', message: 'חסר שם' });
     if (!phone) return json({ status: 'error', message: 'טלפון לא תקין' });
@@ -302,8 +302,8 @@ function isCount(n, min, max) {
   return Number.isInteger(n) && n >= min && n <= max;
 }
 
-function clean(s) {
-  return String(s || '').trim().replace(/^[=+\-@]+/, '').slice(0, 60);
+function clean(s, max) {
+  return String(s || '').trim().replace(/^[=+\-@]+/, '').slice(0, max || 60);
 }
 
 function colorRule(range, text, color) {
