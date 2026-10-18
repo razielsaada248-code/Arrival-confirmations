@@ -131,6 +131,13 @@
   .result { text-align: center; padding: 12px 0; }
   .result h2 { font-family: "Frank Ruhl Libre", serif; font-size: 30px; margin: 0 0 10px; }
   .result p { margin: 0; color: var(--muted); }
+  .summary {
+    margin: 20px 0 0; padding: 14px 16px;
+    border: 1px solid var(--line); border-radius: 10px; background: #fff;
+    display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; text-align: right;
+  }
+  .summary dt { color: var(--muted); }
+  .summary dd { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
   .demo { margin-top: 16px; font-size: 13px; color: var(--muted); text-align: center; }
 </style>
 </head>
@@ -226,6 +233,7 @@
     <div class="result" id="result" hidden>
       <h2 id="resultTitle"></h2>
       <p id="resultText"></p>
+      <dl class="summary" id="summary" hidden></dl>
     </div>
   </div>
   <p class="demo" id="demo" hidden>מצב תצוגה: הטופס עוד לא מחובר לגיליון, תשובות לא נשמרות.</p>
@@ -310,11 +318,42 @@
     return '';
   }
 
-  function showResult(title, text) {
+  function showResult(title, text, data) {
     form.hidden = true;
+    $('deadline').hidden = true; // במסך האישור התאריך האחרון מבלבל
     $('resultTitle').textContent = title;
     $('resultText').textContent = text;
+    if (data) showSummary(data);
     $('result').hidden = false;
+  }
+
+  // מציג לשולח את מה שנשלח, כדי שיוכל לוודא שהפרטים נכונים
+  function showSummary(data) {
+    const rows = [
+      ['שם', data.firstName + ' ' + data.lastName],
+      ['טלפון', data.phone.replace(/^(\d{3})(\d+)$/, '$1-$2')],
+      ['צד', data.side === 'bride' ? 'צד הכלה' : 'צד החתן'],
+      ['תשובה', data.attendance]
+    ];
+    if (data.attendance === 'מגיע') {
+      if (data.side === 'bride') {
+        rows.push(['מבוגרים', data.adults], ['ילדים עד גיל 5', data.kids]);
+        if (data.names) rows.push(['שמות המגיעים', data.names]);
+      } else {
+        rows.push(['מספר מגיעים', data.guests]);
+        if (data.companion) rows.push(['מגיע עם', data.companion]);
+      }
+    }
+    const dl = $('summary');
+    dl.replaceChildren();
+    rows.forEach(([label, value]) => {
+      const dt = document.createElement('dt');
+      const dd = document.createElement('dd');
+      dt.textContent = label;
+      dd.textContent = value;
+      dl.append(dt, dd);
+    });
+    dl.hidden = false;
   }
 
   const MESSAGES = {
@@ -357,7 +396,7 @@
         res = await r.json();
       }
       if (res.status === 'ok' || res.status === 'updated') {
-        showResult(...MESSAGES[data.attendance]);
+        showResult(...MESSAGES[data.attendance], data);
       } else if (res.status === 'already') {
         showResult('כבר קיבלנו את תשובתך', 'לשינוי תשובה אפשר לפנות ישירות לחתן או לכלה.');
       } else {
