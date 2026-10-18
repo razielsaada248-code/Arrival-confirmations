@@ -74,7 +74,19 @@ function doPost(e) {
     if (row) {
       // אפשר לענות שוב רק מי שענה "לא יודע עדיין"
       const prev = sh.getRange(row, COL.status).getValue();
-      if (prev !== UNSURE) return json({ status: 'already', previous: prev });
+      if (prev !== UNSURE) {
+        // את הפרטים השמורים מחזירים רק אם גם השם הפרטי תואם, כדי שמספר טלפון לבד לא יחשוף תשובה של מישהו אחר
+        const saved = sh.getRange(row, 1, 1, HEADERS.length).getValues()[0];
+        if (String(saved[COL.first - 1]).trim() !== first) return json({ status: 'already', previous: prev });
+        const savedBride = saved[COL.side - 1] === SIDES.bride;
+        return json({ status: 'already', previous: prev, saved: {
+          firstName: String(saved[COL.first - 1]), lastName: String(saved[COL.last - 1]),
+          phone: normalizePhone(saved[COL.phone - 1]) || phone,
+          side: savedBride ? 'bride' : 'groom', attendance: prev,
+          guests: String(saved[COL.guests - 1]), adults: String(saved[COL.adults - 1]), kids: String(saved[COL.kids - 1]),
+          companion: savedBride ? '' : String(saved[COL.companion - 1]), names: savedBride ? String(saved[COL.companion - 1]) : ''
+        } });
+      }
       const history = sh.getRange(row, COL.history).getValue();
       const entry = Utilities.formatDate(now, Session.getScriptTimeZone(), 'dd/MM HH:mm') + ' ' + prev + ' → ' + status;
       sh.getRange(row, COL.first, 1, 11).setValues([[first, last, phone, side, status, guests, companion, now, history ? history + '\n' + entry : entry, adults, kids]]);

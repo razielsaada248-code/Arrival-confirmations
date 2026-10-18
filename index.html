@@ -398,7 +398,7 @@
       if (res.status === 'ok' || res.status === 'updated') {
         showResult(...MESSAGES[data.attendance], data);
       } else if (res.status === 'already') {
-        showResult('כבר קיבלנו את תשובתך', 'לשינוי תשובה אפשר לפנות ישירות לחתן או לכלה.');
+        showResult('כבר קיבלנו את תשובתך', (res.saved ? 'אלה הפרטים ששמורים אצלנו. ' : '') + 'לשינוי תשובה אפשר לפנות ישירות לחתן או לכלה.', res.saved);
       } else {
         throw new Error(res.message || 'שגיאה');
       }
