@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="fr" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirmation de présence | Eliya & Ahinoam</title>
+<meta name="description" content="Confirmation de présence au mariage d'Eliya et Ahinoam">
+<meta property="og:title" content="Confirmation de présence – Mariage d'Eliya & Ahinoam">
+<meta property="og:description" content="19.11.2026 · Salles Atura, Latroun · Merci de confirmer votre présence">
+<meta property="og:image" content="https://razielsaada248-code.github.io/Arrival-confirmations/invitation.jpg">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&family=Frank+Ruhl+Libre:wght@400;700&family=Heebo:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* Version française du formulaire (côté marié). Les réponses arrivent dans la même feuille. */
+  :root {
+    --bg: #f3efe6;
+    --card: #fbf9f3;
+    --ink: #4f4b36;
+    --muted: #7a7560;
+    --accent: #b39b4f;
+    --lavender: #8b4f8c;
+    --accent-ink: #ffffff;
+    --line: #e2dbc8;
+    --error: #b3412e;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Heebo", system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.5;
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px 48px;
+  }
+  main { width: 100%; max-width: 480px; }
+  .card {
+    background: var(--card);
+    border: 2px solid var(--accent);
+    border-radius: var(--radius);
+    outline: 1px solid var(--line);
+    outline-offset: -10px;
+    padding: 36px 28px;
+    box-shadow: 0 6px 24px rgba(59, 51, 41, 0.06);
+  }
+  header { text-align: center; margin-bottom: 28px; }
+  .eyebrow { color: var(--lavender); letter-spacing: .08em; font-size: 15px; margin: 0 0 6px; }
+  h1 {
+    font-family: "Amatic SC", "Frank Ruhl Libre", serif;
+    font-weight: 700;
+    font-size: 52px;
+    color: var(--ink);
+    line-height: 1.15;
+    margin: 0 0 12px;
+  }
+  .divider { width: 64px; height: 1px; background: var(--lavender); margin: 14px auto; border: 0; }
+  .details { color: var(--muted); margin: 0; }
+  .details strong { color: var(--ink); font-weight: 500; }
+  .waze {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 12px; color: var(--lavender); font-weight: 500; text-decoration: none;
+    border-bottom: 1px solid currentColor;
+  }
+  .invite-link { display: block; margin-top: 8px; color: var(--lavender); font-size: 15px; }
+  .deadline { font-size: 15px; color: var(--muted); margin-top: 14px; }
+
+  form { display: grid; gap: 20px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  label, legend { display: block; font-weight: 500; margin-bottom: 6px; }
+  fieldset { border: 0; padding: 0; margin: 0; }
+  input[type="text"], input[type="tel"] {
+    width: 100%;
+    font: inherit;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ink);
+  }
+  input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+
+  .choices { display: grid; gap: 10px; }
+  .choices.two { grid-template-columns: 1fr 1fr; }
+  .choice input { position: absolute; opacity: 0; pointer-events: none; }
+  .choice span {
+    display: block; text-align: center;
+    padding: 12px 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .choice input:checked + span { background: var(--lavender); border-color: var(--lavender); color: var(--accent-ink); }
+  .choice input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .side-tag {
+    display: inline-block; margin: 0 0 10px;
+    padding: 3px 14px; border-radius: 999px;
+    border: 1px solid var(--lavender); color: var(--lavender);
+    font-size: 15px; font-weight: 500;
+  }
+  .hint { font-size: 14px; color: var(--muted); margin: 6px 0 0; }
+
+  .error { color: var(--error); font-size: 14px; margin: 6px 0 0; min-height: 0; }
+  .error:empty { display: none; }
+  [hidden] { display: none !important; }
+
+  button[type="submit"] {
+    font: inherit; font-weight: 700;
+    padding: 14px;
+    border: 0; border-radius: 10px;
+    background: var(--lavender); color: #fff;
+    cursor: pointer;
+  }
+  button[disabled] { opacity: .6; cursor: wait; }
+  .hp { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  .result { text-align: center; padding: 12px 0; }
+  .result h2 { font-family: "Frank Ruhl Libre", serif; font-size: 30px; margin: 0 0 10px; }
+  .result p { margin: 0; color: var(--muted); }
+  .summary {
+    margin: 20px 0 0; padding: 14px 16px;
+    border: 1px solid var(--line); border-radius: 10px; background: #fff;
+    display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; text-align: left;
+  }
+  .summary dt { color: var(--muted); }
+  .summary dd { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<main>
+  <div class="card">
+    <header>
+      <p class="eyebrow">Confirmation de présence au mariage</p>
+      <p class="side-tag">Invités du côté du marié</p>
+      <h1>Eliya &amp; Ahinoam</h1>
+      <hr class="divider">
+      <p class="details">
+        <strong>Jeudi 19 novembre 2026</strong><br>
+        <strong>Au soir du 10 Kislev 5787</strong><br>
+        <span>Réception 18h30 · Houppa et Kiddouchin 19h00</span><br>
+        <span>Salles Atura, Parc Mini Israël, Latroun</span>
+      </p>
+      <a class="waze" id="waze" target="_blank" rel="noopener">Itinéraire avec Waze</a>
+      <a class="invite-link" href="invitation.html">Voir le faire-part</a>
+      <p class="deadline" id="deadline">Merci de répondre avant le lundi 9 novembre 2026</p>
+    </header>
+
+    <form id="rsvp" novalidate>
+      <input type="hidden" name="side" value="groom">
+      <div class="row">
+        <div>
+          <label for="firstName">Prénom</label>
+          <input type="text" id="firstName" name="firstName" autocomplete="given-name" required>
+        </div>
+        <div>
+          <label for="lastName">Nom</label>
+          <input type="text" id="lastName" name="lastName" autocomplete="family-name" required>
+        </div>
+      </div>
+
+      <div>
+        <label for="phone">Téléphone</label>
+        <input type="tel" id="phone" name="phone" inputmode="numeric" autocomplete="tel" placeholder="050-0000000" required>
+        <p class="hint">Numéro israélien, ou numéro étranger avec l'indicatif du pays (ex. +33 6 12 34 56 78).</p>
+      </div>
+
+      <fieldset>
+        <legend>Serez-vous présent(e) ?</legend>
+        <div class="choices">
+          <label class="choice"><input type="radio" name="attendance" value="מגיע"><span>Je serai présent(e)</span></label>
+          <label class="choice"><input type="radio" name="attendance" value="לא מגיע"><span>Je ne pourrai pas venir</span></label>
+          <label class="choice"><input type="radio" name="attendance" value="לא יודע עדיין"><span>Je ne sais pas encore</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset id="guestsField" hidden>
+        <legend>Combien de personnes ?</legend>
+        <div class="choices two">
+          <label class="choice"><input type="radio" name="guests" value="1"><span>1</span></label>
+          <label class="choice"><input type="radio" name="guests" value="2"><span>2</span></label>
+        </div>
+        <p class="hint">Les places sont prévues pour deux personnes maximum par invitation.</p>
+      </fieldset>
+
+      <div id="companionField" hidden>
+        <label for="companion">Avec qui venez-vous ?</label>
+        <input type="text" id="companion" name="companion" autocomplete="off" placeholder="Prénom et nom">
+      </div>
+
+      <div class="hp" aria-hidden="true">
+        <label for="website">Site</label>
+        <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+      </div>
+
+      <p class="error" id="formError" role="alert"></p>
+      <button type="submit" id="submitBtn">Envoyer</button>
+    </form>
+
+    <div class="result" id="result" hidden>
+      <h2 id="resultTitle"></h2>
+      <p id="resultText"></p>
+      <dl class="summary" id="summary" hidden></dl>
+    </div>
+  </div>
+</main>
+
+<script>
+  // Même adresse que le formulaire hébreu : les réponses arrivent dans la même feuille.
+  // Les valeurs envoyées (מגיע / לא מגיע / לא יודע עדיין, groom) restent en hébreu car la feuille les attend ainsi.
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzCKpgDIGwDeeKfKWOAsV_oq92LbAAhi9BtDXaxldm3nybhr_LxamLcIsqUXLvCi99I/exec';
+
+  const $ = (id) => document.getElementById(id);
+  const form = $('rsvp');
+  $('waze').href = 'https://waze.com/ul?q=' + encodeURIComponent('אטורה מיני ישראל לטרון') + '&navigate=yes';
+
+  const ANSWERS = { 'מגיע': 'Présent(e)', 'לא מגיע': 'Absent(e)', 'לא יודע עדיין': 'Ne sait pas encore' };
+
+  function updateFields() {
+    const fd = new FormData(form);
+    const coming = fd.get('attendance') === 'מגיע';
+    $('guestsField').hidden = !coming;
+    $('companionField').hidden = !coming || fd.get('guests') !== '2';
+    if ($('guestsField').hidden) form.querySelectorAll('input[name="guests"]').forEach((r) => (r.checked = false));
+    if ($('companionField').hidden) $('companion').value = '';
+  }
+
+  form.addEventListener('change', (e) => {
+    if (['attendance', 'guests'].includes(e.target.name)) updateFields();
+  });
+
+  // Numéro israélien (05X...) ou étranger avec l'indicatif (+33..., 0033...)
+  function normalizePhone(raw) {
+    const intl = /^\s*(\+|00)/.test(String(raw));
+    let digits = String(raw).replace(/\D/g, '');
+    if (intl && digits.startsWith('00')) digits = digits.slice(2);
+    if (digits.startsWith('972')) digits = '0' + digits.slice(3);
+    else if (intl) return /^[1-9]\d{7,14}$/.test(digits) ? '+' + digits : '';
+    return /^0\d{8,9}$/.test(digits) ? digits : '';
+  }
+
+  function validate(data) {
+    if (!data.firstName || !data.lastName) return 'Merci d\'indiquer votre prénom et votre nom';
+    if (!data.phone) return 'Merci d\'indiquer un numéro de téléphone valide (numéro étranger : avec l\'indicatif, ex. +33)';
+    if (!data.attendance) return 'Merci d\'indiquer si vous serez présent(e)';
+    if (data.attendance === 'מגיע' && !data.guests) return 'Merci d\'indiquer le nombre de personnes';
+    if (data.guests === '2' && !data.companion) return 'Merci d\'indiquer avec qui vous venez';
+    return '';
+  }
+
+  function showResult(title, text, data) {
+    form.hidden = true;
+    $('deadline').hidden = true;
+    $('resultTitle').textContent = title;
+    $('resultText').textContent = text;
+    if (data) showSummary(data);
+    $('result').hidden = false;
+  }
+
+  // Affiche ce qui a été envoyé, pour vérifier que les informations sont correctes
+  function showSummary(data) {
+    const rows = [
+      ['Nom', data.firstName + ' ' + data.lastName],
+      ['Téléphone', data.phone.replace(/^(\d{3})(\d+)$/, '$1-$2')],
+      ['Réponse', ANSWERS[data.attendance] || data.attendance]
+    ];
+    if (data.attendance === 'מגיע') {
+      rows.push(['Nombre de personnes', data.guests]);
+      if (data.companion) rows.push(['Accompagné(e) de', data.companion]);
+    }
+    const dl = $('summary');
+    dl.replaceChildren();
+    rows.forEach(([label, value]) => {
+      const dt = document.createElement('dt');
+      const dd = document.createElement('dd');
+      dt.textContent = label;
+      dd.textContent = value;
+      dl.append(dt, dd);
+    });
+    dl.hidden = false;
+  }
+
+  const MESSAGES = {
+    'מגיע': ['Merci, à très bientôt !', 'Votre confirmation a bien été enregistrée.'],
+    'לא מגיע': ['Merci de nous avoir prévenus', 'Nous espérons fêter avec vous une autre fois.'],
+    'לא יודע עדיין': ['Merci, c\'est noté', 'Nous vous enverrons un rappel plus tard pour avoir une réponse définitive.']
+  };
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const data = {
+      firstName: (fd.get('firstName') || '').trim(),
+      lastName: (fd.get('lastName') || '').trim(),
+      phone: normalizePhone(fd.get('phone') || ''),
+      side: 'groom',
+      lang: 'fr', // la feuille envoie les rappels WhatsApp en français
+      attendance: fd.get('attendance') || '',
+      guests: fd.get('guests') || '',
+      companion: (fd.get('companion') || '').trim(),
+      website: fd.get('website') || ''
+    };
+    const error = validate(data);
+    $('formError').textContent = error;
+    if (error) return;
+
+    const btn = $('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Envoi...';
+    try {
+      const r = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(data)
+      });
+      const res = await r.json();
+      if (res.status === 'ok' || res.status === 'updated') {
+        showResult(...MESSAGES[data.attendance], data);
+      } else if (res.status === 'already') {
+        showResult('Nous avons déjà reçu votre réponse', (res.saved ? 'Voici les informations enregistrées. ' : '') + 'Pour modifier votre réponse, merci de contacter directement les mariés.', res.saved);
+      } else {
+        throw new Error(res.message || 'erreur');
+      }
+    } catch (err) {
+      $('formError').textContent = 'L\'envoi a échoué. Merci de réessayer dans un instant.' + (err && err.message ? ' (' + err.message + ')' : '');
+      btn.disabled = false;
+      btn.textContent = 'Envoyer';
+    }
+  });
+</script>
+</body>
+</html>

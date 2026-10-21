@@ -6,6 +6,13 @@ const EVENT_DATE = 'יום חמישי, אור לי\' כסלו התשפ"ז · 19.
 const EVENT_TIME = 'קבלת פנים 18:30 · חופה וקידושין 19:00';
 const EVENT_VENUE = 'אולמי אטורה, פארק מיני ישראל לטרון';
 const WAZE_URL = 'https://waze.com/ul?q=' + encodeURIComponent('אטורה מיני ישראל לטרון') + '&navigate=yes';
+// מי שענה בטופס הצרפתי (fr/) מקבל את ההודעות בצרפתית
+const COUPLE_NAMES_FR = 'Eliya et Ahinoam';
+const FORM_URL_FR = FORM_URL + 'fr/';
+const INVITATION_URL_FR = FORM_URL_FR + 'invitation.html';
+const EVENT_DATE_FR = 'Jeudi 19 novembre 2026 (au soir du 10 Kislev 5787)';
+const EVENT_TIME_FR = 'Réception 18h30 · Houppa et Kiddouchin 19h00';
+const EVENT_VENUE_FR = 'Salles Atura, Parc Mini Israël, Latroun';
 // ==================
 
 const SHEET_RESPONSES = 'תשובות';
@@ -13,14 +20,16 @@ const SHEET_SUMMARY = 'סיכום';
 const SHEET_REMINDERS = 'תזכורות';
 const SHEET_EVENT = 'שבוע לפני';
 
-const HEADERS = ['תאריך תשובה', 'שם פרטי', 'שם משפחה', 'טלפון', 'צד', 'סטטוס', 'מספר מגיעים', 'שמות המלווים', 'עודכן לאחרונה', 'היסטוריה', 'מבוגרים', 'ילדים עד גיל 5'];
-const COL = { date: 1, first: 2, last: 3, phone: 4, side: 5, status: 6, guests: 7, companion: 8, updated: 9, history: 10, adults: 11, kids: 12 };
+const HEADERS = ['תאריך תשובה', 'שם פרטי', 'שם משפחה', 'טלפון', 'צד', 'סטטוס', 'מספר מגיעים', 'שמות המלווים', 'עודכן לאחרונה', 'היסטוריה', 'מבוגרים', 'ילדים עד גיל 5', 'שפה'];
+const COL = { date: 1, first: 2, last: 3, phone: 4, side: 5, status: 6, guests: 7, companion: 8, updated: 9, history: 10, adults: 11, kids: 12, lang: 13 };
 
 const COMING = 'מגיע';
 const NOT_COMING = 'לא מגיע';
 const UNSURE = 'לא יודע עדיין';
 const STATUSES = [COMING, NOT_COMING, UNSURE];
 const SIDES = { groom: 'צד חתן', bride: 'צד כלה' };
+const HEBREW = 'עברית';
+const FRENCH = 'צרפתית';
 
 function onOpen() {
   SpreadsheetApp.getUi()
@@ -51,6 +60,7 @@ function doPost(e) {
     const phone = normalizePhone(d.phone);
     const side = SIDES[d.side];
     const status = d.attendance;
+    const lang = d.lang === 'fr' ? FRENCH : HEBREW;
     // צד החתן: 1 או 2 + שם המלווה. צד הכלה: מבוגרים + ילדים עד גיל 5.
     const bride = d.side === 'bride';
     const coming = status === COMING;
@@ -89,7 +99,7 @@ function doPost(e) {
       }
       const history = sh.getRange(row, COL.history).getValue();
       const entry = Utilities.formatDate(now, Session.getScriptTimeZone(), 'dd/MM HH:mm') + ' ' + prev + ' → ' + status;
-      sh.getRange(row, COL.first, 1, 11).setValues([[first, last, phone, side, status, guests, companion, now, history ? history + '\n' + entry : entry, adults, kids]]);
+      sh.getRange(row, COL.first, 1, 12).setValues([[first, last, phone, side, status, guests, companion, now, history ? history + '\n' + entry : entry, adults, kids, lang]]);
       refreshLists();
       return json({ status: 'updated' });
     }
@@ -97,7 +107,7 @@ function doPost(e) {
     const newRow = sh.getLastRow() + 1;
     const range = sh.getRange(newRow, 1, 1, HEADERS.length);
     sh.getRange(newRow, COL.phone).setNumberFormat('@');
-    range.setValues([[now, first, last, phone, side, status, guests, companion, now, '', adults, kids]]);
+    range.setValues([[now, first, last, phone, side, status, guests, companion, now, '', adults, kids, lang]]);
     if (status !== NOT_COMING) refreshLists();
     return json({ status: 'ok' });
   } catch (err) {
@@ -136,6 +146,7 @@ function setup() {
   );
   const count = SpreadsheetApp.newDataValidation().requireNumberBetween(0, 10).setAllowInvalid(false).build();
   resp.getRange('K2:L').setDataValidation(count);
+  resp.getRange('M2:M').setDataValidation(list([HEBREW, FRENCH])); // ריק = עברית
 
   buildSummary(getSheet(SHEET_SUMMARY));
   buildSideSheets();
@@ -195,8 +206,13 @@ function refreshLists() {
   buildEventReminders();
 }
 
+function isFrench(r) {
+  return r[COL.lang - 1] === FRENCH;
+}
+
 function buildReminders() {
   buildList(SHEET_REMINDERS, UNSURE, '📲 שלח תזכורת', (r) => {
+    if (isFrench(r)) return 'Bonjour ' + r[COL.first - 1] + ', nous voulions vous rappeler de confirmer votre présence au mariage d\'' + COUPLE_NAMES_FR + ' : ' + FORM_URL_FR + ' 💛';
     const sideKey = r[COL.side - 1] === SIDES.bride ? 'bride' : 'groom';
     return 'היי ' + r[COL.first - 1] + ', רצינו להזכיר לאשר הגעה לחתונה של ' + COUPLE_NAMES + ': ' + FORM_URL + '?side=' + sideKey + ' 💛';
   });
@@ -206,6 +222,22 @@ function buildEventReminders() {
   buildList(SHEET_EVENT, COMING, '📲 שלח הודעה', (r) => {
     const guests = Number(r[COL.guests - 1]) || 1;
     const kids = Number(r[COL.kids - 1]) || 0;
+    if (isFrench(r)) {
+      return [
+        'Bonjour ' + r[COL.first - 1] + ' ! 💐',
+        'Nous avons la joie de vous rappeler que dans une semaine nous fêterons le mariage d\'' + COUPLE_NAMES_FR + ' 🎉',
+        '',
+        '📅 ' + EVENT_DATE_FR,
+        '🕡 ' + EVENT_TIME_FR,
+        '📍 ' + EVENT_VENUE_FR,
+        '🚗 Itinéraire : ' + WAZE_URL,
+        '',
+        'Vous avez confirmé la présence de ' + (guests === 1 ? 'une personne' : guests + ' personnes') + '.',
+        '💌 Le faire-part : ' + INVITATION_URL_FR,
+        '',
+        'Au plaisir de vous voir !'
+      ].join('\n');
+    }
     const party = (guests === 1 ? 'אדם אחד' : guests + ' אנשים') + (kids ? ' (מתוכם ' + kids + ' ילדים)' : '');
     return [
       'היי ' + r[COL.first - 1] + '! 💐',
@@ -251,7 +283,8 @@ function buildList(sheetName, status, buttonText, makeMessage) {
 
   const rows = people.map((r) => {
     const phone = normalizePhone(r[COL.phone - 1]);
-    const url = 'https://wa.me/972' + phone.slice(1) + '?text=' + encodeURIComponent(makeMessage(r));
+    const waNumber = phone.startsWith('+') ? phone.slice(1) : '972' + phone.slice(1);
+    const url = 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(makeMessage(r));
     const button = phone ? '=HYPERLINK("' + url + '","' + buttonText + '")' : 'טלפון לא תקין';
     return [r[COL.first - 1], r[COL.last - 1], phone || r[COL.phone - 1], r[COL.side - 1], button, !!sent[phone]];
   });
@@ -273,7 +306,7 @@ function buildSideSheets() {
     sh.setRightToLeft(true);
     sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold').setBackground('#efe7d8');
     sh.setFrozenRows(1);
-    sh.getRange('A2').setFormula('=IFERROR(FILTER(' + R + 'A2:L,' + R + 'E2:E="' + side + '"),"אין עדיין תשובות")');
+    sh.getRange('A2').setFormula('=IFERROR(FILTER(' + R + 'A2:M,' + R + 'E2:E="' + side + '"),"אין עדיין תשובות")');
     sh.getRange('A:A').setNumberFormat('dd/MM/yyyy HH:mm');
     sh.getRange('I:I').setNumberFormat('dd/MM/yyyy HH:mm');
     sh.setColumnWidths(1, HEADERS.length, 130);
@@ -303,9 +336,13 @@ function findRowByPhone(sh, phone) {
   return 0;
 }
 
+// מספר ישראלי נשמר כ-05X..., מספר מחו"ל (שהוזן עם + או 00) נשמר עם + וקידומת המדינה
 function normalizePhone(raw) {
+  const intl = /^\s*(\+|00)/.test(String(raw || ''));
   let digits = String(raw || '').replace(/\D/g, '');
+  if (intl && digits.startsWith('00')) digits = digits.slice(2);
   if (digits.startsWith('972')) digits = '0' + digits.slice(3);
+  else if (intl) return /^[1-9]\d{7,14}$/.test(digits) ? '+' + digits : '';
   if (/^5\d{8}$/.test(digits)) digits = '0' + digits; // אם גוגל הוריד את ה-0
   return /^0\d{8,9}$/.test(digits) ? digits : '';
 }

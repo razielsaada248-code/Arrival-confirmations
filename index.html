@@ -302,15 +302,19 @@
     if (['attendance', 'side', 'guests', 'adults', 'kids'].includes(e.target.name)) updateFields();
   });
 
+  // מספר ישראלי (05X...) או מספר מחו"ל עם קידומת מדינה (+33..., 0033...)
   function normalizePhone(raw) {
+    const intl = /^\s*(\+|00)/.test(String(raw));
     let digits = String(raw).replace(/\D/g, '');
+    if (intl && digits.startsWith('00')) digits = digits.slice(2);
     if (digits.startsWith('972')) digits = '0' + digits.slice(3);
+    else if (intl) return /^[1-9]\d{7,14}$/.test(digits) ? '+' + digits : '';
     return /^0\d{8,9}$/.test(digits) ? digits : '';
   }
 
   function validate(data) {
     if (!data.firstName || !data.lastName) return 'נא למלא שם פרטי ושם משפחה';
-    if (!data.phone) return 'נא להזין מספר טלפון תקין';
+    if (!data.phone) return 'נא להזין מספר טלפון תקין (מספר מחו"ל: עם קידומת המדינה, למשל ‎+33)';
     if (!data.side) return 'נא לבחור צד חתן או צד כלה';
     if (!data.attendance) return 'נא לבחור אם תגיעו';
     if (data.attendance === 'מגיע' && data.side !== 'bride' && !data.guests) return 'נא לבחור כמה מגיעים';
