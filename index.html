@@ -149,13 +149,27 @@
   .summary dt { color: var(--muted); }
   .summary dd { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
   .demo { margin-top: 16px; font-size: 13px; color: var(--muted); text-align: center; }
+
+  /* הגדלת ההזמנה בתוך הדף */
+  .lightbox { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; background: rgba(20, 18, 12, .94); }
+  .lb-scroll { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 64px 12px 8px; direction: ltr; }
+  .lb-scroll img { width: 100%; max-width: 1600px; height: auto; border-radius: 8px; cursor: zoom-in; }
+  .lightbox.zoomed .lb-scroll { align-items: flex-start; justify-content: flex-start; }
+  .lightbox.zoomed .lb-scroll img { width: 260%; max-width: none; cursor: zoom-out; }
+  .lb-close {
+    position: fixed; top: 12px; left: 12px; z-index: 11;
+    width: 44px; height: 44px; border: 0; border-radius: 50%;
+    background: #fff; color: var(--ink); font-size: 22px; line-height: 44px; cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .3);
+  }
+  .lb-hint { margin: 0; padding: 8px 16px 16px; color: #fff; font-size: 14px; text-align: center; }
 </style>
 </head>
 <body>
 <main>
   <div class="card">
-    <!-- ההזמנה עצמה למעלה, לחיצה פותחת אותה בגודל מלא -->
-    <a class="invite" href="invitation.jpg" target="_blank" rel="noopener">
+    <!-- ההזמנה עצמה למעלה, לחיצה מגדילה אותה בתוך הדף -->
+    <a class="invite" id="invite" href="invitation.jpg">
       <img src="invitation.jpg" alt="ההזמנה לחתונה של אליה ואחינועם" width="1600" height="960">
       לחצו על ההזמנה להגדלה 🔍
     </a>
@@ -253,6 +267,11 @@
       <dl class="summary" id="summary" hidden></dl>
     </div>
   </div>
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="ההזמנה" hidden>
+    <button type="button" class="lb-close" id="lbClose" aria-label="סגירה">✕</button>
+    <div class="lb-scroll" id="lbScroll"><img id="lbImg" src="invitation.jpg" alt="ההזמנה לחתונה של אליה ואחינועם"></div>
+    <p class="lb-hint">לחיצה על התמונה מגדילה או מקטינה</p>
+  </div>
   <p class="demo" id="demo" hidden>מצב תצוגה: הטופס עוד לא מחובר לגיליון, תשובות לא נשמרות.</p>
 </main>
 
@@ -290,6 +309,40 @@
     $('deadline').hidden = false;
   }
   if (!CONFIG.scriptUrl) $('demo').hidden = false;
+
+  // הגדלת ההזמנה בתוך הדף. כפתור "חזרה" בטלפון סוגר אותה, כמו ה-X.
+  const lightbox = $('lightbox');
+  function closeInvite() {
+    lightbox.hidden = true;
+    lightbox.classList.remove('zoomed');
+    document.body.style.overflow = '';
+  }
+  function requestClose() {
+    if (history.state && history.state.invite) history.back();
+    else closeInvite();
+  }
+  $('invite').addEventListener('click', (e) => {
+    e.preventDefault();
+    lightbox.hidden = false;
+    document.body.style.overflow = 'hidden';
+    history.pushState({ invite: true }, '');
+    $('lbClose').focus();
+  });
+  $('lbClose').addEventListener('click', requestClose);
+  $('lbScroll').addEventListener('click', (e) => { if (e.target === e.currentTarget) requestClose(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !lightbox.hidden) requestClose(); });
+  window.addEventListener('popstate', closeInvite);
+  // לחיצה על התמונה מגדילה סביב הנקודה שנלחצה, ולחיצה נוספת מקטינה
+  $('lbImg').addEventListener('click', (e) => {
+    const img = e.currentTarget;
+    const box = img.getBoundingClientRect();
+    const fx = (e.clientX - box.left) / box.width;
+    const fy = (e.clientY - box.top) / box.height;
+    if (!lightbox.classList.toggle('zoomed')) return;
+    const scroller = $('lbScroll');
+    scroller.scrollLeft = fx * img.offsetWidth - scroller.clientWidth / 2;
+    scroller.scrollTop = fy * img.offsetHeight - scroller.clientHeight / 2;
+  });
 
   // קישור עם ?side=groom או ?side=bride קובע את הצד מראש ומסתיר את השאלה
   const presetSide = new URLSearchParams(location.search).get('side');
