@@ -113,6 +113,16 @@
   }
   select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .hint { font-size: 14px; color: var(--muted); margin: 6px 0 0; }
+  .coming-box {
+    display: grid; gap: 16px;
+    padding: 14px;
+    border: 2px solid var(--lavender); border-radius: 10px;
+    background: #f6eef6;
+  }
+  .coming-box legend { color: var(--lavender); font-weight: 700; }
+
+  .invite { display: block; margin: 0 0 24px; text-align: center; color: var(--lavender); font-size: 14px; text-decoration: none; }
+  .invite img { width: 100%; height: auto; display: block; border-radius: 10px; border: 1px solid var(--line); margin-bottom: 6px; }
 
   .error { color: var(--error); font-size: 14px; margin: 6px 0 0; min-height: 0; }
   .error:empty { display: none; }
@@ -144,6 +154,11 @@
 <body>
 <main>
   <div class="card">
+    <!-- ההזמנה עצמה למעלה, לחיצה פותחת אותה בגודל מלא -->
+    <a class="invite" href="invitation.jpg" target="_blank" rel="noopener">
+      <img src="invitation.jpg" alt="ההזמנה לחתונה של אליה ואחינועם" width="1600" height="960">
+      לחצו על ההזמנה להגדלה 🔍
+    </a>
     <header>
       <p class="eyebrow">אישור הגעה לחתונה</p>
       <p class="side-tag" id="sideTag" hidden></p>
@@ -183,43 +198,45 @@
         <legend>האם תגיעו?</legend>
         <div class="choices">
           <label class="choice"><input type="radio" name="attendance" value="מגיע"><span>מגיע/ה</span></label>
+          <!-- כמה מגיעים: מופיע ישר מתחת ל"מגיע/ה", כדי שבטלפון לא יפספסו -->
+          <div class="coming-box" id="comingBox" hidden>
+            <fieldset id="guestsField" hidden>
+              <legend>כמה מגיעים?</legend>
+              <div class="choices two">
+                <label class="choice"><input type="radio" name="guests" value="1"><span>1</span></label>
+                <label class="choice"><input type="radio" name="guests" value="2"><span>2</span></label>
+              </div>
+              <p class="hint">המקומות מיועדים עד שני אנשים להזמנה.</p>
+            </fieldset>
+
+            <fieldset id="partyField" hidden>
+              <legend>כמה מגיעים?</legend>
+              <div class="row">
+                <div>
+                  <label for="adults">מבוגרים</label>
+                  <select id="adults" name="adults"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select>
+                </div>
+                <div>
+                  <label for="kids">ילדים עד גיל 5</label>
+                  <select id="kids" name="kids"><option value="0" selected>0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select>
+                </div>
+              </div>
+              <div id="namesField" hidden>
+                <label for="names" style="margin-top:12px">שמות המגיעים איתך</label>
+                <input type="text" id="names" name="names" autocomplete="off" placeholder="לדוגמה: רחל, יוסי, נועה">
+                <p class="hint">לא חובה, אבל נשמח לדעת.</p>
+              </div>
+            </fieldset>
+
+            <div id="companionField" hidden>
+              <label for="companion">עם מי אתה מגיע?</label>
+              <input type="text" id="companion" name="companion" autocomplete="off" placeholder="שם פרטי ושם משפחה">
+            </div>
+          </div>
           <label class="choice"><input type="radio" name="attendance" value="לא מגיע"><span>לא מגיע/ה</span></label>
           <label class="choice"><input type="radio" name="attendance" value="לא יודע עדיין"><span>עוד לא יודע/ת</span></label>
         </div>
       </fieldset>
-
-      <fieldset id="guestsField" hidden>
-        <legend>כמה מגיעים?</legend>
-        <div class="choices two">
-          <label class="choice"><input type="radio" name="guests" value="1"><span>1</span></label>
-          <label class="choice"><input type="radio" name="guests" value="2"><span>2</span></label>
-        </div>
-        <p class="hint">המקומות מיועדים עד שני אנשים להזמנה.</p>
-      </fieldset>
-
-      <fieldset id="partyField" hidden>
-        <legend>כמה מגיעים?</legend>
-        <div class="row">
-          <div>
-            <label for="adults">מבוגרים</label>
-            <select id="adults" name="adults"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select>
-          </div>
-          <div>
-            <label for="kids">ילדים עד גיל 5</label>
-            <select id="kids" name="kids"><option value="0" selected>0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option></select>
-          </div>
-        </div>
-        <div id="namesField" hidden>
-          <label for="names" style="margin-top:12px">שמות המגיעים איתך</label>
-          <input type="text" id="names" name="names" autocomplete="off" placeholder="לדוגמה: רחל, יוסי, נועה">
-          <p class="hint">לא חובה, אבל נשמח לדעת.</p>
-        </div>
-      </fieldset>
-
-      <div id="companionField" hidden>
-        <label for="companion">עם מי אתה מגיע?</label>
-        <input type="text" id="companion" name="companion" autocomplete="off" placeholder="שם פרטי ושם משפחה">
-      </div>
 
       <div class="hp" aria-hidden="true">
         <label for="website">אתר</label>
@@ -288,6 +305,7 @@
     const fd = new FormData(form);
     const coming = fd.get('attendance') === 'מגיע';
     const bride = fd.get('side') === 'bride';
+    $('comingBox').hidden = !coming;
     $('guestsField').hidden = !coming || bride;
     $('partyField').hidden = !coming || !bride;
     $('companionField').hidden = !coming || bride || fd.get('guests') !== '2';
