@@ -13,6 +13,8 @@ const INVITATION_URL_FR = FORM_URL_FR + 'invitation.html';
 const EVENT_DATE_FR = 'Jeudi 19 novembre 2026 (au soir du 10 Kislev 5787)';
 const EVENT_TIME_FR = 'Réception 18h30 · Houppa et Kiddouchin 19h00';
 const EVENT_VENUE_FR = 'Salles Atura, Parc Mini Israël, Latroun';
+// טלפונים שאפשר לרשום מהם כמה מוזמנים שרוצים (כל שם = שורה נפרדת), ושלא נכנסים לרשימת "שבוע לפני"
+const MULTI_GUEST_PHONES = ['0509303994'];
 // ==================
 
 const SHEET_RESPONSES = 'תשובות';
@@ -79,7 +81,8 @@ function doPost(e) {
 
     const sh = getSheet(SHEET_RESPONSES);
     const now = new Date();
-    const row = findRowByPhone(sh, phone);
+    // מטלפון "מרובה מוזמנים" מזהים לפי טלפון + שם מלא, כך שכל מוזמן חדש נרשם בשורה משלו
+    const row = isMultiGuest(phone) ? findRowByPhoneAndName(sh, phone, first, last) : findRowByPhone(sh, phone);
 
     if (row) {
       // אפשר לענות שוב רק מי שענה "לא יודע עדיין"
@@ -253,10 +256,11 @@ function buildEventReminders() {
       '',
       'מחכים לראותכם!'
     ].join('\n');
-  });
+  }, (r) => isMultiGuest(r[COL.phone - 1]));
 }
 
-function buildList(sheetName, status, buttonText, makeMessage) {
+// skip: מי לא להכניס לרשימה (לא חובה)
+function buildList(sheetName, status, buttonText, makeMessage, skip) {
   const sh = getSheet(sheetName);
   sh.setRightToLeft(true);
 
@@ -270,7 +274,7 @@ function buildList(sheetName, status, buttonText, makeMessage) {
 
   const resp = getSheet(SHEET_RESPONSES);
   const data = resp.getLastRow() > 1 ? resp.getRange(2, 1, resp.getLastRow() - 1, HEADERS.length).getValues() : [];
-  const people = data.filter((r) => r[COL.status - 1] === status);
+  const people = data.filter((r) => r[COL.status - 1] === status && !(skip && skip(r)));
 
   sh.clear();
   sh.getRange(1, 1, 1, 6)
@@ -324,6 +328,20 @@ function buildSideSheets() {
 function getSheet(name) {
   const ss = SpreadsheetApp.getActive();
   return ss.getSheetByName(name) || ss.insertSheet(name);
+}
+
+function isMultiGuest(phone) {
+  return MULTI_GUEST_PHONES.indexOf(normalizePhone(phone)) >= 0;
+}
+
+function findRowByPhoneAndName(sh, phone, first, last) {
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return 0;
+  const rows = sh.getRange(2, COL.first, lastRow - 1, 3).getValues(); // שם פרטי, שם משפחה, טלפון
+  for (let i = 0; i < rows.length; i++) {
+    if (normalizePhone(rows[i][2]) === phone && String(rows[i][0]).trim() === first && String(rows[i][1]).trim() === last) return i + 2;
+  }
+  return 0;
 }
 
 function findRowByPhone(sh, phone) {
