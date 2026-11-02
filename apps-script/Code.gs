@@ -16,9 +16,9 @@ const EVENT_VENUE_FR = 'Salles Atura, Parc Mini Israël, Latroun';
 // טלפונים שאפשר לרשום מהם כמה מוזמנים שרוצים (כל שם = שורה נפרדת), ושלא נכנסים לרשימת "שבוע לפני"
 const MULTI_GUEST_PHONES = ['0509303994'];
 // נוסחי ה-SMS. {name} = שם פרטי, {link} = קישור. SMS בעברית: עד 70 תווים בחלק אחד, מעבר לזה כל 67 תווים = חלק נוסף
-const SMS_REMINDER_HE = 'היי {name}, נשמח לאישור הגעה לחתונת אליה ואחינועם עד 9.11: {link}';
-const SMS_REMINDER_FR = 'Bonjour {name}, merci de confirmer votre présence au mariage d\'Eliya et Ahinoam avant le 9.11 : {link}';
-const SMS_EVENT_HE = 'היי {name}! מחכים לך בחתונת אליה ואחינועם, ה\' 19.11 18:30, אולמי אטורה לטרון. הזמנה וניווט: {link}';
+const SMS_REMINDER_HE = 'היי {name}, ראינו שעוד לא בטוח אם תגיעו לחתונת אליה ואחינועם. נשמח לתשובה סופית עד 9.11: {link}';
+const SMS_REMINDER_FR = 'Bonjour {name}, vous n\'étiez pas encore sûr(e) de venir au mariage d\'Eliya et Ahinoam. Merci de répondre avant le 9.11 : {link}';
+const SMS_EVENT_HE = 'היי {name}! מחכים לך בחתונת אליה ואחינועם, ה\' 19.11 18:30, אולמי אטורה לטרון. ההזמנה וניווט ב-Waze: {link}';
 const SMS_EVENT_FR = 'Bonjour {name} ! Nous vous attendons au mariage d\'Eliya et Ahinoam, jeudi 19.11 à 18h30, salles Atura, Latroun. Faire-part et itinéraire : {link}';
 // ==================
 
