@@ -15,6 +15,11 @@ const EVENT_TIME_FR = 'Réception 18h30 · Houppa et Kiddouchin 19h00';
 const EVENT_VENUE_FR = 'Salles Atura, Parc Mini Israël, Latroun';
 // טלפונים שאפשר לרשום מהם כמה מוזמנים שרוצים (כל שם = שורה נפרדת), ושלא נכנסים לרשימת "שבוע לפני"
 const MULTI_GUEST_PHONES = ['0509303994'];
+// נוסחי ה-SMS. {name} = שם פרטי, {link} = קישור. SMS בעברית: עד 70 תווים בחלק אחד, מעבר לזה כל 67 תווים = חלק נוסף
+const SMS_REMINDER_HE = 'היי {name}, נשמח לאישור הגעה לחתונת אליה ואחינועם עד 9.11: {link}';
+const SMS_REMINDER_FR = 'Bonjour {name}, merci de confirmer votre présence au mariage d\'Eliya et Ahinoam avant le 9.11 : {link}';
+const SMS_EVENT_HE = 'היי {name}! מחכים לך בחתונת אליה ואחינועם, ה\' 19.11 18:30, אולמי אטורה לטרון. הזמנה וניווט: {link}';
+const SMS_EVENT_FR = 'Bonjour {name} ! Nous vous attendons au mariage d\'Eliya et Ahinoam, jeudi 19.11 à 18h30, salles Atura, Latroun. Faire-part et itinéraire : {link}';
 // ==================
 
 const SHEET_RESPONSES = 'תשובות';
@@ -22,8 +27,8 @@ const SHEET_SUMMARY = 'סיכום';
 const SHEET_REMINDERS = 'תזכורות';
 const SHEET_EVENT = 'שבוע לפני';
 
-const HEADERS = ['תאריך תשובה', 'שם פרטי', 'שם משפחה', 'טלפון', 'צד', 'סטטוס', 'מספר מגיעים', 'שמות המלווים', 'עודכן לאחרונה', 'היסטוריה', 'מבוגרים', 'ילדים עד גיל 5', 'שפה'];
-const COL = { date: 1, first: 2, last: 3, phone: 4, side: 5, status: 6, guests: 7, companion: 8, updated: 9, history: 10, adults: 11, kids: 12, lang: 13 };
+const HEADERS = ['תאריך תשובה', 'שם פרטי', 'שם משפחה', 'טלפון', 'צד', 'סטטוס', 'מספר מגיעים', 'שמות המלווים', 'עודכן לאחרונה', 'היסטוריה', 'מבוגרים', 'ילדים עד גיל 5', 'שפה', 'SMS תזכורת', 'SMS שבוע לפני'];
+const COL = { date: 1, first: 2, last: 3, phone: 4, side: 5, status: 6, guests: 7, companion: 8, updated: 9, history: 10, adults: 11, kids: 12, lang: 13, smsReminder: 14, smsEvent: 15 };
 
 const COMING = 'מגיע';
 const NOT_COMING = 'לא מגיע';
@@ -38,6 +43,11 @@ function onOpen() {
     .createMenu('אישורי הגעה')
     .addItem('התקנה ראשונית', 'setup')
     .addItem('רענון רשימות השליחה', 'refreshLists')
+    .addSeparator()
+    .addItem('📱 שליחת תזכורת SMS', 'sendReminderSms')
+    .addItem('📱 שליחת SMS שבוע לפני', 'sendEventSms')
+    .addItem('SMS ניסיון למספר שלי', 'sendTestSms')
+    .addItem('הגדרות חשבון SMS', 'setupSmsAccount')
     .addToUi();
 }
 
@@ -110,7 +120,7 @@ function doPost(e) {
     const newRow = sh.getLastRow() + 1;
     const range = sh.getRange(newRow, 1, 1, HEADERS.length);
     sh.getRange(newRow, COL.phone).setNumberFormat('@');
-    range.setValues([[now, first, last, phone, side, status, guests, companion, now, '', adults, kids, lang]]);
+    range.setValues([[now, first, last, phone, side, status, guests, companion, now, '', adults, kids, lang, '', '']]);
     if (status !== NOT_COMING) refreshLists();
     return json({ status: 'ok' });
   } catch (err) {
@@ -130,6 +140,7 @@ function setup() {
   resp.setRightToLeft(true);
   resp.getRange('A:A').setNumberFormat('dd/MM/yyyy HH:mm');
   resp.getRange('I:I').setNumberFormat('dd/MM/yyyy HH:mm');
+  resp.getRange('N:O').setNumberFormat('dd/MM/yyyy HH:mm');
   resp.getRange('D:D').setNumberFormat('@');
   resp.setColumnWidths(1, HEADERS.length, 130);
   resp.setColumnWidth(COL.history, 240);
@@ -298,24 +309,26 @@ function buildList(sheetName, status, buttonText, makeMessage, skip) {
   const people = data.filter((r) => r[COL.status - 1] === status && !(skip && skip(r)));
 
   sh.clear();
-  sh.getRange(1, 1, 1, 6)
-    .setValues([['שם פרטי', 'שם משפחה', 'טלפון', 'צד', 'שליחה', 'נשלח']])
+  sh.getRange(1, 1, 1, 7)
+    .setValues([['שם פרטי', 'שם משפחה', 'טלפון', 'צד', 'שליחה', 'נשלח', 'SMS נשלח']])
     .setFontWeight('bold')
     .setBackground('#efe7d8');
   sh.setFrozenRows(1);
-  sh.setColumnWidths(1, 6, 120);
+  sh.setColumnWidths(1, 7, 120);
   if (!people.length) return;
+  const smsCol = sheetName === SHEET_REMINDERS ? COL.smsReminder : COL.smsEvent;
 
   const rows = people.map((r) => {
     const phone = normalizePhone(r[COL.phone - 1]);
     const waNumber = phone.startsWith('+') ? phone.slice(1) : '972' + phone.slice(1);
     const url = 'https://wa.me/' + waNumber + '?text=' + encodeURIComponent(makeMessage(r));
     const button = phone ? '=HYPERLINK("' + url + '","' + buttonText + '")' : 'טלפון לא תקין';
-    return [r[COL.first - 1], r[COL.last - 1], phone || r[COL.phone - 1], r[COL.side - 1], button, !!sent[phone]];
+    return [r[COL.first - 1], r[COL.last - 1], phone || r[COL.phone - 1], r[COL.side - 1], button, !!sent[phone], r[smsCol - 1]];
   });
 
   sh.getRange(2, 3, rows.length, 1).setNumberFormat('@');
-  sh.getRange(2, 1, rows.length, 6).setValues(rows);
+  sh.getRange(2, 7, rows.length, 1).setNumberFormat('dd/MM/yyyy HH:mm');
+  sh.getRange(2, 1, rows.length, 7).setValues(rows);
   const checks = sh.getRange(2, 6, rows.length, 1);
   checks.insertCheckboxes();
   checks.setValues(rows.map((r) => [r[5]]));
@@ -331,7 +344,7 @@ function buildSideSheets() {
     sh.setRightToLeft(true);
     sh.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold').setBackground('#efe7d8');
     sh.setFrozenRows(1);
-    sh.getRange('A2').setFormula('=IFERROR(FILTER(' + R + 'A2:M,' + R + 'E2:E="' + side + '"),"אין עדיין תשובות")');
+    sh.getRange('A2').setFormula('=IFERROR(FILTER(' + R + 'A2:O,' + R + 'E2:E="' + side + '"),"אין עדיין תשובות")');
     sh.getRange('A:A').setNumberFormat('dd/MM/yyyy HH:mm');
     sh.getRange('I:I').setNumberFormat('dd/MM/yyyy HH:mm');
     sh.setColumnWidths(1, HEADERS.length, 130);
@@ -343,6 +356,173 @@ function buildSideSheets() {
       colorRule(statusRange, UNSURE, '#fff2cc')
     ]);
   });
+}
+
+// ===== SMS בלחיצה אחת (דרך SMS4Free) =====
+// פרטי החשבון נשמרים ב-Script Properties ולא בקוד, כי המאגר ציבורי. מזינים אותם דרך התפריט "הגדרות חשבון SMS".
+const SMS_API_URL = 'https://api.sms4free.co.il/ApiSMS/v2/SendSMS';
+const SMS_ERRORS = {
+  '0': 'שגיאה כללית אצל SMS4Free', '-1': 'מפתח, שם משתמש או סיסמה שגויים', '-2': 'שם השולח לא תקין',
+  '-3': 'מספר הטלפון לא תקין', '-4': 'נגמרו ההודעות בחבילה', '-5': 'תוכן ההודעה נחסם', '-6': 'מספר השולח עוד לא אומת'
+};
+const SMS_FATAL = ['-1', '-2', '-4', '-6']; // שגיאות שבגללן אין טעם להמשיך לשלוח לשאר
+
+function setupSmsAccount() {
+  const ui = SpreadsheetApp.getUi();
+  const props = PropertiesService.getScriptProperties();
+  const fields = [
+    ['SMS4FREE_KEY', 'מפתח ה-API (באתר SMS4Free, בדף API)'],
+    ['SMS4FREE_USER', 'שם המשתמש: מספר הנייד שאיתו נרשמת ל-SMS4Free'],
+    ['SMS4FREE_PASS', 'הסיסמה של החשבון ב-SMS4Free'],
+    ['SMS_SENDER', 'שם השולח: עד 11 אותיות באנגלית (למשל EliyaWedding), או מספר הנייד שלך. בלי חבילה בתשלום אפשר רק את מספר הנייד, ואם משאירים ריק נשלח ממנו']
+  ];
+  for (const [key, label] of fields) {
+    const note = props.getProperty(key) ? '\n\n(כבר מוגדר. להשאיר ריק כדי לא לשנות)' : '';
+    const res = ui.prompt('הגדרות חשבון SMS', label + note, ui.ButtonSet.OK_CANCEL);
+    if (res.getSelectedButton() !== ui.Button.OK) return;
+    const value = res.getResponseText().trim();
+    if (value) props.setProperty(key, value);
+  }
+  ui.alert('נשמר. כדי לבדוק, אפשר לבחור "SMS ניסיון למספר שלי".');
+}
+
+function smsAccount() {
+  const p = PropertiesService.getScriptProperties();
+  const a = { key: p.getProperty('SMS4FREE_KEY'), user: p.getProperty('SMS4FREE_USER'), pass: p.getProperty('SMS4FREE_PASS') };
+  a.sender = p.getProperty('SMS_SENDER') || a.user;
+  return a.key && a.user && a.pass ? a : null;
+}
+
+// שולח SMS אחד. מחזיר { error, fatal }: error ריק אם הצליח
+function sendSms(account, phone, text) {
+  const res = UrlFetchApp.fetch(SMS_API_URL, {
+    method: 'post',
+    contentType: 'application/json',
+    muteHttpExceptions: true,
+    payload: JSON.stringify({ key: account.key, user: account.user, pass: account.pass, sender: account.sender, recipient: phone, msg: text })
+  });
+  let status;
+  try {
+    status = Number(JSON.parse(res.getContentText()).status);
+  } catch (err) {
+    return { error: 'תשובה לא צפויה מ-SMS4Free (' + res.getResponseCode() + ')', fatal: true };
+  }
+  if (status > 0) return { error: '' };
+  return { error: SMS_ERRORS[String(status)] || 'שגיאה ' + status, fatal: SMS_FATAL.indexOf(String(status)) >= 0 };
+}
+
+function smsText(r, kind) {
+  const fr = isFrench(r);
+  let template, link;
+  if (kind === 'reminder') {
+    template = fr ? SMS_REMINDER_FR : SMS_REMINDER_HE;
+    link = fr ? FORM_URL_FR : FORM_URL + '?side=' + (r[COL.side - 1] === SIDES.bride ? 'bride' : 'groom');
+  } else {
+    template = fr ? SMS_EVENT_FR : SMS_EVENT_HE;
+    link = fr ? INVITATION_URL_FR : INVITATION_URL;
+  }
+  return template.replace('{name}', String(r[COL.first - 1]).trim()).replace('{link}', link);
+}
+
+// כמה הודעות זה יוריד מהחבילה: בעברית 70 תווים בחלק אחד (67 בכל חלק כשיש כמה), באנגלית/צרפתית 160 (153)
+function smsParts(text) {
+  const unicode = /[^\x00-\x7Féèàùç€]/.test(text);
+  const one = unicode ? 70 : 160;
+  const many = unicode ? 67 : 153;
+  return text.length <= one ? 1 : Math.ceil(text.length / many);
+}
+
+// מי יקבל: לפי סטטוס, בלי מי שכבר קיבל. טלפון שמופיע בכמה שורות מקבל הודעה אחת
+function smsRecipients(kind) {
+  const status = kind === 'reminder' ? UNSURE : COMING;
+  const sentCol = kind === 'reminder' ? COL.smsReminder : COL.smsEvent;
+  const resp = getSheet(SHEET_RESPONSES);
+  const data = resp.getLastRow() > 1 ? resp.getRange(2, 1, resp.getLastRow() - 1, HEADERS.length).getValues() : [];
+  const byPhone = {};
+  const skipped = [];
+  data.forEach((r, i) => {
+    if (r[COL.status - 1] !== status) return;
+    if (kind === 'event' && isMultiGuest(r[COL.phone - 1])) return;
+    const phone = normalizePhone(r[COL.phone - 1]);
+    if (!phone || phone.startsWith('+')) {
+      skipped.push(r[COL.first - 1] + ' ' + r[COL.last - 1]);
+      return;
+    }
+    const g = byPhone[phone] || (byPhone[phone] = { phone: phone, row: r, rowNums: [], sent: false });
+    g.rowNums.push(i + 2);
+    if (r[sentCol - 1]) g.sent = true;
+  });
+  return { groups: Object.keys(byPhone).map((p) => byPhone[p]).filter((g) => !g.sent), skipped: skipped, sentCol: sentCol };
+}
+
+function sendReminderSms() { sendSmsBatch('reminder'); }
+function sendEventSms() { sendSmsBatch('event'); }
+
+function sendSmsBatch(kind) {
+  const ui = SpreadsheetApp.getUi();
+  const title = kind === 'reminder' ? 'תזכורת SMS' : 'SMS שבוע לפני';
+  const account = smsAccount();
+  if (!account) {
+    ui.alert(title, 'קודם צריך להגדיר את חשבון ה-SMS: אישורי הגעה ← הגדרות חשבון SMS', ui.ButtonSet.OK);
+    return;
+  }
+  const list = smsRecipients(kind);
+  if (!list.groups.length) {
+    ui.alert(title, 'אין למי לשלוח: כולם כבר קיבלו, או שאין אף אחד ברשימה.', ui.ButtonSet.OK);
+    return;
+  }
+  const texts = list.groups.map((g) => smsText(g.row, kind));
+  const parts = texts.reduce((n, t) => n + smsParts(t), 0);
+  const answer = ui.alert(title,
+    'יישלח ל-' + list.groups.length + ' אנשים (בערך ' + parts + ' הודעות מהחבילה).\n\nדוגמה:\n' + texts[0] +
+    (list.skipped.length ? '\n\nלא יישלח ל-' + list.skipped.length + ' עם מספר מחו"ל או מספר לא תקין: ' + list.skipped.join(', ') : '') +
+    '\n\nלשלוח עכשיו?', ui.ButtonSet.YES_NO);
+  if (answer !== ui.Button.YES) return;
+
+  const resp = getSheet(SHEET_RESPONSES);
+  const failed = [];
+  let sent = 0;
+  for (let i = 0; i < list.groups.length; i++) {
+    const g = list.groups[i];
+    const result = sendSms(account, g.phone, texts[i]);
+    if (result.error) {
+      failed.push(g.row[COL.first - 1] + ' ' + g.row[COL.last - 1] + ': ' + result.error);
+      if (result.fatal) {
+        failed.push('השליחה נעצרה, ' + (list.groups.length - i - 1) + ' נוספים לא נשלחו.');
+        break;
+      }
+      continue;
+    }
+    const now = new Date();
+    g.rowNums.forEach((n) => resp.getRange(n, list.sentCol).setValue(now)); // מסמן "נשלח SMS", כדי שלא יקבלו שוב
+    sent++;
+  }
+  SpreadsheetApp.flush();
+  refreshLists();
+  ui.alert(title, 'נשלח ל-' + sent + ' אנשים.' + (failed.length ? '\n\nלא נשלח:\n' + failed.join('\n') : ''), ui.ButtonSet.OK);
+}
+
+// שולח את שני הנוסחים (תזכורת ושבוע לפני) למספר אחד, לבדיקה. לא מסמן כלום בגיליון
+function sendTestSms() {
+  const ui = SpreadsheetApp.getUi();
+  const account = smsAccount();
+  if (!account) {
+    ui.alert('SMS ניסיון', 'קודם צריך להגדיר את חשבון ה-SMS: אישורי הגעה ← הגדרות חשבון SMS', ui.ButtonSet.OK);
+    return;
+  }
+  const res = ui.prompt('SMS ניסיון', 'לאיזה מספר לשלוח? יישלחו 2 הודעות לדוגמה: תזכורת ושבוע לפני.', ui.ButtonSet.OK_CANCEL);
+  if (res.getSelectedButton() !== ui.Button.OK) return;
+  const phone = normalizePhone(res.getResponseText());
+  if (!phone || phone.startsWith('+')) {
+    ui.alert('SMS ניסיון', 'מספר לא תקין. צריך מספר ישראלי, למשל 0501234567.', ui.ButtonSet.OK);
+    return;
+  }
+  const sample = [];
+  sample[COL.first - 1] = 'בדיקה';
+  sample[COL.side - 1] = SIDES.groom;
+  sample[COL.lang - 1] = HEBREW;
+  const errors = ['reminder', 'event'].map((kind) => sendSms(account, phone, smsText(sample, kind)).error).filter(Boolean);
+  ui.alert('SMS ניסיון', errors.length ? 'לא נשלח: ' + errors.join(', ') : 'נשלחו 2 הודעות ל-' + phone + '.', ui.ButtonSet.OK);
 }
 
 // ===== עזר =====
