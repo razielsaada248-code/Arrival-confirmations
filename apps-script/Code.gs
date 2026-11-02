@@ -154,7 +154,28 @@ function setup() {
   buildSummary(getSheet(SHEET_SUMMARY));
   buildSideSheets();
   refreshLists();
+  protectSheets();
   ss.setActiveSheet(ss.getSheetByName(SHEET_SUMMARY));
+}
+
+// ===== הגנה: לשוניות שמחושבות לבד נעולות לעריכה, כדי ששינוי בטעות לא ישבור אותן =====
+// בעל הגיליון תמיד יכול לערוך. את "תשובות" ואת רשימות השליחה לא נועלים, כי ממלאים בהן ידנית.
+function protectSheets() {
+  const summary = getSheet(SHEET_SUMMARY);
+  lockSheet(summary, 'סיכום: מחושב לבד. רק התאים הצהובים (כמה הזמנות נשלחו) פתוחים לעריכה', [summary.getRange('C4:D4')]);
+  Object.keys(SIDES).forEach((key) => {
+    lockSheet(getSheet(SIDES[key]), SIDES[key] + ': מתעדכן לבד מתוך "תשובות". לשינוי תשובה עורכים בלשונית "תשובות"');
+  });
+}
+
+function lockSheet(sh, description, editableRanges) {
+  sh.getProtections(SpreadsheetApp.ProtectionType.SHEET).forEach((p) => p.remove());
+  const p = sh.protect().setDescription(description);
+  if (editableRanges) p.setUnprotectedRanges(editableRanges);
+  const me = Session.getEffectiveUser();
+  p.addEditor(me);
+  p.removeEditors(p.getEditors().filter((u) => u.getEmail() !== me.getEmail()));
+  if (p.canDomainEdit()) p.setDomainEdit(false);
 }
 
 function buildSummary(sh) {
