@@ -377,11 +377,12 @@ function setupSmsAccount() {
     ['SMS_SENDER', 'שם השולח: עד 11 אותיות באנגלית (למשל EliyaWedding), או מספר הנייד שלך. בלי חבילה בתשלום אפשר רק את מספר הנייד, ואם משאירים ריק נשלח ממנו']
   ];
   for (const [key, label] of fields) {
-    const note = props.getProperty(key) ? '\n\n(כבר מוגדר. להשאיר ריק כדי לא לשנות)' : '';
+    const note = props.getProperty(key) ? '\n\n(כבר מוגדר. להשאיר ריק כדי לא לשנות, או לכתוב - כדי למחוק)' : '';
     const res = ui.prompt('הגדרות חשבון SMS', label + note, ui.ButtonSet.OK_CANCEL);
     if (res.getSelectedButton() !== ui.Button.OK) return;
     const value = res.getResponseText().trim();
-    if (value) props.setProperty(key, value);
+    if (value === '-') props.deleteProperty(key);
+    else if (value) props.setProperty(key, value);
   }
   ui.alert('נשמר. כדי לבדוק, אפשר לבחור "SMS ניסיון למספר שלי".');
 }
