@@ -178,7 +178,7 @@
       </p>
       <a class="waze" id="waze" target="_blank" rel="noopener">Itinéraire avec Waze</a>
       <a class="invite-link" href="invitation.html">Voir le faire-part</a>
-      <p class="deadline" id="deadline">Merci de répondre avant le lundi 9 novembre 2026</p>
+      <p class="deadline" id="deadline" hidden>Merci de répondre avant le lundi 9 novembre 2026</p>
     </header>
 
     <form id="rsvp" novalidate>
@@ -393,7 +393,7 @@
       if (res.status === 'ok' || res.status === 'updated') {
         showResult(...MESSAGES[data.attendance], data);
       } else if (res.status === 'already') {
-        showResult('Nous avons déjà reçu votre réponse', (res.saved ? 'Voici les informations enregistrées. ' : '') + 'Pour modifier votre réponse, merci de contacter directement les mariés.', res.saved);
+        showResult('Ce numéro est déjà enregistré', 'Ce numéro est enregistré avec un autre prénom. Pour modifier votre réponse, saisissez le même prénom qu\'à l\'inscription, ou contactez directement les mariés.');
       } else {
         throw new Error(res.message || 'erreur');
       }

@@ -284,7 +284,7 @@
     timeText: 'קבלת פנים 18:30 · חופה וקידושין 19:00',
     venue: 'אולמי אטורה, פארק מיני ישראל לטרון',
     address: 'אטורה מיני ישראל לטרון', // חיפוש היעד ב-Waze
-    deadlineText: 'נשמח לתשובתכם עד יום שני, 9.11.2026',
+    deadlineText: '',
     scriptUrl: 'https://script.google.com/macros/s/AKfycbzCKpgDIGwDeeKfKWOAsV_oq92LbAAhi9BtDXaxldm3nybhr_LxamLcIsqUXLvCi99I/exec'
   };
   // =====================================
@@ -473,7 +473,7 @@
       if (res.status === 'ok' || res.status === 'updated') {
         showResult(...MESSAGES[data.attendance], data);
       } else if (res.status === 'already') {
-        showResult('כבר קיבלנו את תשובתך', (res.saved ? 'אלה הפרטים ששמורים אצלנו. ' : '') + 'לשינוי תשובה אפשר לפנות ישירות לחתן או לכלה.', res.saved);
+        showResult('המספר הזה כבר רשום', 'המספר רשום אצלנו עם שם פרטי אחר. כדי לשנות תשובה צריך להזין את אותו שם פרטי שנרשם, או לפנות ישירות לחתן או לכלה.');
       } else {
         throw new Error(res.message || 'שגיאה');
       }

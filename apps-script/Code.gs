@@ -16,8 +16,8 @@ const EVENT_VENUE_FR = 'Salles Atura, Parc Mini Israël, Latroun';
 // טלפונים שאפשר לרשום מהם כמה מוזמנים שרוצים (כל שם = שורה נפרדת), ושלא נכנסים לרשימת "שבוע לפני"
 const MULTI_GUEST_PHONES = ['0509303994'];
 // נוסחי ה-SMS. {name} = שם פרטי, {link} = קישור. SMS בעברית: עד 70 תווים בחלק אחד, מעבר לזה כל 67 תווים = חלק נוסף
-const SMS_REMINDER_HE = 'היי {name}, ראינו שעוד לא בטוח אם תגיעו לחתונת אליה ואחינועם. נשמח לתשובה סופית עד 9.11: {link}';
-const SMS_REMINDER_FR = 'Bonjour {name}, vous n\'étiez pas encore sûr(e) de venir au mariage d\'Eliya et Ahinoam. Merci de répondre avant le 9.11 : {link}';
+const SMS_REMINDER_HE = 'היי {name}, ראינו שעוד לא בטוח אם תגיעו לחתונת אליה ואחינועם. נשמח לתשובה סופית: {link}';
+const SMS_REMINDER_FR = 'Bonjour {name}, vous n\'étiez pas encore sûr(e) de venir au mariage d\'Eliya et Ahinoam. Merci de nous répondre : {link}';
 const SMS_EVENT_HE = 'היי {name}! מחכים לך בחתונת אליה ואחינועם, ה\' 19.11 18:30, אולמי אטורה לטרון. ההזמנה וניווט ב-Waze: {link}';
 const SMS_EVENT_FR = 'Bonjour {name} ! Nous vous attendons au mariage d\'Eliya et Ahinoam, jeudi 19.11 à 18h30, salles Atura, Latroun. Faire-part et itinéraire : {link}';
 // ==================
@@ -44,8 +44,14 @@ function onOpen() {
     .addItem('התקנה ראשונית', 'setup')
     .addItem('רענון רשימות השליחה', 'refreshLists')
     .addSeparator()
-    .addItem('📱 שליחת תזכורת SMS', 'sendReminderSms')
-    .addItem('📱 שליחת SMS שבוע לפני', 'sendEventSms')
+    .addItem('📱 תזכורת SMS - צד חתן', 'sendReminderSmsGroom')
+    .addItem('📱 תזכורת SMS - צד כלה', 'sendReminderSmsBride')
+    .addItem('📱 תזכורת SMS - כולם', 'sendReminderSms')
+    .addSeparator()
+    .addItem('📱 SMS פרטי האירוע - צד חתן', 'sendEventSmsGroom')
+    .addItem('📱 SMS פרטי האירוע - צד כלה', 'sendEventSmsBride')
+    .addItem('📱 SMS פרטי האירוע - כולם', 'sendEventSms')
+    .addSeparator()
     .addItem('SMS ניסיון למספר שלי', 'sendTestSms')
     .addItem('הגדרות חשבון SMS', 'setupSmsAccount')
     .addToUi();
@@ -95,20 +101,11 @@ function doPost(e) {
     const row = isMultiGuest(phone) ? findRowByPhoneAndName(sh, phone, first, last) : findRowByPhone(sh, phone);
 
     if (row) {
-      // אפשר לענות שוב רק מי שענה "לא יודע עדיין"
+      // כל אחד יכול לשנות את התשובה שלו. מי שענה "מגיע" או "לא מגיע" צריך להזין את אותו שם פרטי,
+      // כדי שמספר טלפון לבד לא יאפשר לשנות תשובה של מישהו אחר
       const prev = sh.getRange(row, COL.status).getValue();
-      if (prev !== UNSURE) {
-        // את הפרטים השמורים מחזירים רק אם גם השם הפרטי תואם, כדי שמספר טלפון לבד לא יחשוף תשובה של מישהו אחר
-        const saved = sh.getRange(row, 1, 1, HEADERS.length).getValues()[0];
-        if (String(saved[COL.first - 1]).trim() !== first) return json({ status: 'already', previous: prev });
-        const savedBride = saved[COL.side - 1] === SIDES.bride;
-        return json({ status: 'already', previous: prev, saved: {
-          firstName: String(saved[COL.first - 1]), lastName: String(saved[COL.last - 1]),
-          phone: normalizePhone(saved[COL.phone - 1]) || phone,
-          side: savedBride ? 'bride' : 'groom', attendance: prev,
-          guests: String(saved[COL.guests - 1]), adults: String(saved[COL.adults - 1]), kids: String(saved[COL.kids - 1]),
-          companion: savedBride ? '' : String(saved[COL.companion - 1]), names: savedBride ? String(saved[COL.companion - 1]) : ''
-        } });
+      if (prev !== UNSURE && String(sh.getRange(row, COL.first).getValue()).trim() !== first) {
+        return json({ status: 'already', previous: prev });
       }
       const history = sh.getRange(row, COL.history).getValue();
       const entry = Utilities.formatDate(now, Session.getScriptTimeZone(), 'dd/MM HH:mm') + ' ' + prev + ' → ' + status;
@@ -260,7 +257,7 @@ function buildEventReminders() {
     if (isFrench(r)) {
       return [
         'Bonjour ' + r[COL.first - 1] + ' ! 💐',
-        'Nous avons la joie de vous rappeler que dans une semaine nous fêterons le mariage d\'' + COUPLE_NAMES_FR + ' 🎉',
+        'Nous avons la joie de vous rappeler qu\'aujourd\'hui nous fêterons le mariage d\'' + COUPLE_NAMES_FR + ' 🎉',
         '',
         '📅 ' + EVENT_DATE_FR,
         '🕡 ' + EVENT_TIME_FR,
@@ -276,7 +273,7 @@ function buildEventReminders() {
     const party = (guests === 1 ? 'אדם אחד' : guests + ' אנשים') + (kids ? ' (מתוכם ' + kids + ' ילדים)' : '');
     return [
       'היי ' + r[COL.first - 1] + '! 💐',
-      'מזכירים בשמחה שבעוד שבוע נחגוג את החתונה של ' + COUPLE_NAMES + ' 🎉',
+      'מזכירים בשמחה שהיום נחגוג את החתונה של ' + COUPLE_NAMES + ' 🎉',
       '',
       '📅 ' + EVENT_DATE,
       '🕡 ' + EVENT_TIME,
@@ -434,7 +431,7 @@ function smsParts(text) {
 }
 
 // מי יקבל: לפי סטטוס, בלי מי שכבר קיבל. טלפון שמופיע בכמה שורות מקבל הודעה אחת
-function smsRecipients(kind) {
+function smsRecipients(kind, sideKey) {
   const status = kind === 'reminder' ? UNSURE : COMING;
   const sentCol = kind === 'reminder' ? COL.smsReminder : COL.smsEvent;
   const resp = getSheet(SHEET_RESPONSES);
@@ -443,6 +440,7 @@ function smsRecipients(kind) {
   const skipped = [];
   data.forEach((r, i) => {
     if (r[COL.status - 1] !== status) return;
+    if (sideKey && r[COL.side - 1] !== SIDES[sideKey]) return;
     if (kind === 'event' && isMultiGuest(r[COL.phone - 1])) return;
     const phone = normalizePhone(r[COL.phone - 1]);
     if (!phone || phone.startsWith('+')) {
@@ -457,17 +455,22 @@ function smsRecipients(kind) {
 }
 
 function sendReminderSms() { sendSmsBatch('reminder'); }
+function sendReminderSmsGroom() { sendSmsBatch('reminder', 'groom'); }
+function sendReminderSmsBride() { sendSmsBatch('reminder', 'bride'); }
 function sendEventSms() { sendSmsBatch('event'); }
+function sendEventSmsGroom() { sendSmsBatch('event', 'groom'); }
+function sendEventSmsBride() { sendSmsBatch('event', 'bride'); }
 
-function sendSmsBatch(kind) {
+// sideKey: 'groom' / 'bride' שולח רק לצד הזה. בלי - לכולם
+function sendSmsBatch(kind, sideKey) {
   const ui = SpreadsheetApp.getUi();
-  const title = kind === 'reminder' ? 'תזכורת SMS' : 'SMS שבוע לפני';
+  const title = (kind === 'reminder' ? 'תזכורת SMS' : 'SMS פרטי האירוע') + ' - ' + (sideKey ? SIDES[sideKey] : 'כולם');
   const account = smsAccount();
   if (!account) {
     ui.alert(title, 'קודם צריך להגדיר את חשבון ה-SMS: אישורי הגעה ← הגדרות חשבון SMS', ui.ButtonSet.OK);
     return;
   }
-  const list = smsRecipients(kind);
+  const list = smsRecipients(kind, sideKey);
   if (!list.groups.length) {
     ui.alert(title, 'אין למי לשלוח: כולם כבר קיבלו, או שאין אף אחד ברשימה.', ui.ButtonSet.OK);
     return;
